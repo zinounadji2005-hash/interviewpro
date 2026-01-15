@@ -3,20 +3,19 @@ import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
 import { optimizeCV, generateInterviewQuestions, evaluateAnswer, generateSessionEvaluation, detectWeaknessPatterns } from "./ai";
-import { setupAuth, registerAuthRoutes, isAuthenticated } from "./replit_integrations/auth";
+import { setupSupabaseAuth, isAuthenticated } from "./supabase-auth";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 function getUserId(req: Request): string | null {
-  return (req.user as any)?.claims?.sub || null;
+  return (req.user as any)?.claims?.sub || (req.session as any)?.userId || null;
 }
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
-  await setupAuth(app);
-  registerAuthRoutes(app);
+  await setupSupabaseAuth(app);
 
   app.get("/api/dashboard", isAuthenticated, async (req: Request, res: Response) => {
     try {

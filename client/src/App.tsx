@@ -6,6 +6,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/hooks/use-auth";
 import Landing from "@/pages/landing";
+import Login from "@/pages/auth/login";
+import Signup from "@/pages/auth/signup";
 import Dashboard from "@/pages/dashboard/index";
 import CVManager from "@/pages/dashboard/cv";
 import Interview from "@/pages/dashboard/interview";
@@ -49,11 +51,13 @@ function Router() {
       <Route path="/">
         {user ? <Dashboard /> : <Landing />}
       </Route>
+      <Route path="/login" component={Login} />
+      <Route path="/signup" component={Signup} />
       {user ? (
         <AuthenticatedRoutes />
       ) : (
         <Route path="/dashboard/:rest*">
-          <Landing />
+          <Login />
         </Route>
       )}
       <Route component={NotFound} />
