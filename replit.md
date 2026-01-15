@@ -45,6 +45,17 @@ Preferred communication style: Simple, everyday language.
 - **Features**: CV text optimization, interview question generation, answer evaluation, session scoring, weakness pattern detection
 - **Audio Support**: Voice chat capabilities with text-to-speech and speech-to-text
 
+### Credit System
+- **Default Balance**: New users start with 100 credits
+- **Credit Costs**:
+  - CV optimization: 10 credits
+  - Start new interview: 20 credits
+  - Interview evaluation: 15 credits
+- **Storage**: credits field in users table (integer, default 100)
+- **API Endpoints**: /api/credits (GET), credits included in /api/dashboard response
+- **Error Handling**: HTTP 402 for insufficient credits with descriptive messages
+- **UI**: Credit balance card on dashboard with low-balance warning (<30 credits)
+
 ### Project Structure
 ```
 client/           # React frontend
@@ -65,7 +76,7 @@ migrations/       # Database migrations output
 ### Core Services
 - **PostgreSQL Database**: Primary data store (provisioned via Replit)
 - **OpenAI API**: AI features via `AI_INTEGRATIONS_OPENAI_API_KEY` and `AI_INTEGRATIONS_OPENAI_BASE_URL` environment variables
-- **Replit Auth**: User authentication via OIDC (`ISSUER_URL`, `REPL_ID`, `SESSION_SECRET`)
+- **Supabase Auth**: User authentication via Supabase (`SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SESSION_SECRET`)
 
 ### Key NPM Packages
 - **drizzle-orm** / **drizzle-kit**: Database ORM and migrations
