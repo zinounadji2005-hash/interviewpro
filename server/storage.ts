@@ -22,6 +22,9 @@ import { eq, desc, and } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
+  getUserCredits(userId: string): Promise<number>;
+  deductCredits(userId: string, amount: number): Promise<boolean>;
+  addCredits(userId: string, amount: number): Promise<boolean>;
   
   getCvsByUserId(userId: string): Promise<CV[]>;
   getCv(id: number): Promise<CV | undefined>;
@@ -52,6 +55,31 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  async getUserCredits(userId: string): Promise<number> {
+    const [user] = await db.select({ credits: users.credits }).from(users).where(eq(users.id, userId));
+    return user?.credits ?? 0;
+  }
+
+  async deductCredits(userId: string, amount: number): Promise<boolean> {
+    const currentCredits = await this.getUserCredits(userId);
+    if (currentCredits < amount) {
+      return false;
+    }
+    await db.update(users)
+      .set({ credits: currentCredits - amount, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    return true;
+  }
+
+  async addCredits(userId: string, amount: number): Promise<boolean> {
+    const [user] = await db.select().from(users).where(eq(users.id, userId));
+    if (!user) return false;
+    await db.update(users)
+      .set({ credits: (user.credits || 0) + amount, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+    return true;
   }
 
   async getCvsByUserId(userId: string): Promise<CV[]> {
