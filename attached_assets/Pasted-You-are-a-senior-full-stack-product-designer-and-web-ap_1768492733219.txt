@@ -1,0 +1,182 @@
+You are a senior full-stack product designer and web application architect.
+Your task is to design and generate a complete MVP web application focused on helping job seekers successfully pass job interviews.
+
+Product Overview
+
+Build a web-based platform that assists users in improving their job interview performance through CV optimization and AI-powered mock interviews with performance evaluation and improvement tracking.
+
+The application must be production-oriented, scalable, and user-friendly, but limited strictly to the MVP scope described below.
+
+Core Objectives
+
+Improve the quality and effectiveness of user CVs.
+
+Simulate realistic job interview experiences.
+
+Identify user weaknesses and provide actionable feedback.
+
+Measure improvement between interview attempts.
+
+Deliver personalized career and interview advice.
+
+Functional Requirements (MVP)
+1. Landing Page
+
+Clear value proposition explaining how the platform helps users pass job interviews.
+
+Call-to-action buttons:
+
+“Get Started”
+
+“Sign Up”
+
+“Log In”
+
+Simple, professional, and trustworthy UI.
+
+Brief explanation of the process:
+
+Upload CV → Improve CV → Mock Interview → Feedback → Second Interview → Progress Evaluation.
+
+2. Authentication
+
+User registration and login system.
+
+Email + password authentication (social login optional but not required for MVP).
+
+Secure session handling.
+
+3. Main Dashboard (Post-Login)
+
+This is the primary user workspace.
+
+Features:
+
+Upload CV (PDF / DOCX).
+
+CV analysis and optimization:
+
+Improve wording
+
+Strengthen achievements
+
+Optimize for ATS (Applicant Tracking Systems)
+
+Provide explanations for suggested changes.
+
+Display original vs improved CV comparison.
+
+4. AI-Powered Mock Interview – Round 1
+
+Conduct an initial virtual interview based on:
+
+User’s CV
+
+Selected job role (if provided) or generic role otherwise
+
+Interview format:
+
+Text-based or voice-based (choose one for MVP).
+
+Ask realistic interview questions (behavioral + technical if applicable).
+
+Capture user responses.
+
+5. Interview Evaluation & Feedback
+
+After the first interview:
+
+Analyze answers for:
+
+Clarity
+
+Confidence
+
+Relevance
+
+Structure (STAR method, etc.)
+
+Identify weaknesses and mistakes.
+
+Provide:
+
+Clear improvement points
+
+Example better answers
+
+Communication tips
+
+6. AI-Powered Mock Interview – Round 2
+
+Conduct a second interview after feedback.
+
+Questions should be:
+
+Similar in difficulty
+
+Slightly varied to avoid memorization
+
+Compare performance against the first interview.
+
+7. Improvement Analysis & Advice
+
+Show comparison results:
+
+Improvement areas
+
+Remaining weaknesses
+
+Provide:
+
+Personalized interview tips
+
+CV-related advice
+
+General job interview guidance
+
+Non-Functional Requirements
+
+Clean, modern UI (professional career-focused design).
+
+Responsive (desktop-first, mobile-friendly).
+
+Modular architecture.
+
+Clear separation between:
+
+Frontend
+
+Backend
+
+AI logic
+
+Easy to extend in future versions.
+
+Constraints
+
+This is an MVP:
+
+No payment system.
+
+No admin panel.
+
+No advanced analytics.
+
+Focus on correctness, usability, and clarity over feature quantity.
+
+Deliverables Expected from You
+
+Full application structure.
+
+UI/UX layout and page flow.
+
+Recommended tech stack.
+
+Core backend logic.
+
+AI interaction logic and prompts.
+
+Minimal but functional implementation ready for testing.
+
+Act as if this product will be used by real job seekers.
+Prioritize realism, clarity, and measurable improvement.

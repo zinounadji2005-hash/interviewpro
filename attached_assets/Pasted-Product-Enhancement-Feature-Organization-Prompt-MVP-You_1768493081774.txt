@@ -1,0 +1,184 @@
+Product Enhancement & Feature Organization Prompt (MVP+)
+
+You are a senior product manager, UX strategist, and full-stack architect.
+Your task is to enhance an existing MVP web application for job interview preparation by organizing, prioritizing, and implementing high-impact feature improvements without over-engineering.
+
+You must respect MVP constraints while maximizing user value, clarity, and measurable improvement.
+
+Enhancement Objectives
+
+Increase personalization and realism of the interview experience.
+
+Make progress and improvement clearly visible to users.
+
+Reduce cognitive overload while increasing perceived intelligence of the system.
+
+Prepare a clean foundation for future scalability.
+
+Feature Organization & Prioritization
+Tier 1 – Must-Have Enhancements (Implement in MVP+)
+1. Job Role / Job Description Targeting
+
+Allow users to:
+
+Select a target job role from a predefined list, OR
+
+Paste a job description.
+
+Use this input to:
+
+Optimize the CV specifically for the role.
+
+Generate role-relevant interview questions.
+
+UX Requirement:
+
+Simple dropdown + optional text area.
+
+Clear explanation of why this improves results.
+
+2. Structured Interview Scoring System
+
+After each interview, generate a score (0–100).
+
+Break down the score into:
+
+Communication
+
+Confidence
+
+Relevance
+
+Answer Structure
+
+Display:
+
+Numeric score
+
+Simple visual indicator (progress bar or chart).
+
+3. Executive Feedback Summary
+
+After each interview session, generate:
+
+Top 3 critical mistakes
+
+Top 3 improvement points
+
+One high-impact actionable advice (“Focus Point”)
+
+Purpose:
+
+Enable fast understanding.
+
+Prevent user overwhelm.
+
+4. Session History & Progress Comparison
+
+Store previous interview sessions.
+
+Allow users to:
+
+View past scores
+
+Compare Interview Round 1 vs Round 2
+
+Automatically highlight improvement or regression.
+
+Tier 2 – High-Value, Low-Complexity Enhancements
+5. Interview Mode Selector
+
+Before starting an interview, allow users to select:
+
+HR Interview
+
+Technical Interview
+
+Behavioral Interview
+
+Implementation Note:
+
+Prompt-based logic only.
+
+No additional backend complexity.
+
+6. Model Answers & Explanations
+
+For each interview question:
+
+Provide a sample strong answer.
+
+Explain:
+
+Why it works
+
+What makes it effective
+
+Educational Focus:
+
+Teach, not just evaluate.
+
+7. Weakness Pattern Detection
+
+Across multiple sessions:
+
+Detect recurring weaknesses.
+
+Generate insights such as:
+
+“You frequently give unfocused introductions”
+
+“Your answers lack concrete examples”
+
+Output:
+
+Clear pattern-based insights.
+
+Suggested focus areas for improvement.
+
+UX & Product Design Guidelines
+
+Keep all enhancements optional and non-intrusive.
+
+Avoid cluttering the main dashboard.
+
+Present insights progressively (step-by-step).
+
+Maintain professional, career-focused tone.
+
+Technical Constraints
+
+No payment systems.
+
+No admin dashboard.
+
+No audio/video processing.
+
+Text-based interviews only.
+
+Minimal database complexity.
+
+Deliverables Expected
+
+Updated feature map and user flow.
+
+UI/UX placement for each enhancement.
+
+Backend logic changes required.
+
+AI prompt logic updates for:
+
+CV optimization
+
+Interview generation
+
+Feedback and scoring
+
+Clear separation between MVP and post-MVP features.
+
+Strategic Instruction
+
+Build these enhancements as modular components.
+Each feature must be removable without breaking the core system.
+
+Prioritize clarity, learning value, and real-world usefulness over novelty.
