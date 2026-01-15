@@ -22,16 +22,30 @@ export async function registerRoutes(
       const userId = getUserId(req);
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const [cvs, sessions, latestEvaluation] = await Promise.all([
+      const [cvs, sessions, latestEvaluation, credits] = await Promise.all([
         storage.getCvsByUserId(userId),
         storage.getInterviewsByUserId(userId),
         storage.getLatestEvaluationByUserId(userId),
+        storage.getUserCredits(userId),
       ]);
 
-      res.json({ cvs, sessions, latestEvaluation });
+      res.json({ cvs, sessions, latestEvaluation, credits });
     } catch (error) {
       console.error("Dashboard error:", error);
       res.status(500).json({ error: "Failed to load dashboard" });
+    }
+  });
+
+  app.get("/api/credits", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const credits = await storage.getUserCredits(userId);
+      res.json({ credits });
+    } catch (error) {
+      console.error("Get credits error:", error);
+      res.status(500).json({ error: "Failed to get credits" });
     }
   });
 
@@ -93,6 +107,12 @@ export async function registerRoutes(
       const cv = await storage.getCv(cvId);
       if (!cv || cv.userId !== userId) {
         return res.status(404).json({ error: "CV not found" });
+      }
+
+      const creditCost = 10;
+      const hasCredits = await storage.deductCredits(userId, creditCost);
+      if (!hasCredits) {
+        return res.status(402).json({ error: "Insufficient credits", required: creditCost });
       }
 
       const { targetRole, jobDescription } = req.body;
@@ -161,6 +181,12 @@ export async function registerRoutes(
     try {
       const userId = getUserId(req);
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const creditCost = 20;
+      const hasCredits = await storage.deductCredits(userId, creditCost);
+      if (!hasCredits) {
+        return res.status(402).json({ error: "Insufficient credits", required: creditCost });
+      }
 
       const { interviewType, cvId } = req.body;
       
@@ -253,6 +279,12 @@ export async function registerRoutes(
 
       if (answeredQuestions.length === 0) {
         return res.status(400).json({ error: "No questions answered. Please answer at least one question." });
+      }
+
+      const creditCost = 15;
+      const hasCredits = await storage.deductCredits(userId, creditCost);
+      if (!hasCredits) {
+        return res.status(402).json({ error: "Insufficient credits", required: creditCost });
       }
 
       const individualScores: { communication: number; confidence: number; relevance: number; structure: number }[] = [];
