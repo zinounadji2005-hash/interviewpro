@@ -44,19 +44,26 @@ function getSession() {
 }
 
 async function upsertUser(userId: string, email: string, firstName?: string, lastName?: string) {
-  const existing = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-  if (existing.length === 0) {
-    await db.insert(users).values({
-      id: userId,
-      email,
-      firstName: firstName || email.split("@")[0],
-      lastName: lastName || "",
-    });
-  } else {
-    await db.update(users).set({
-      email,
-      updatedAt: new Date(),
-    }).where(eq(users.id, userId));
+  try {
+    const existing = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (existing.length === 0) {
+      await db.insert(users).values({
+        id: userId,
+        email,
+        firstName: firstName || email.split("@")[0],
+        lastName: lastName || "",
+      });
+    } else {
+      await db.update(users).set({
+        email,
+        firstName: firstName || existing[0].firstName,
+        lastName: lastName || existing[0].lastName,
+        updatedAt: new Date(),
+      }).where(eq(users.id, userId));
+    }
+  } catch (error) {
+    console.error("Failed to upsert user:", error);
+    throw error;
   }
 }
 
@@ -84,14 +91,17 @@ export async function setupSupabaseAuth(app: Express) {
         return res.status(400).json({ error: error.message });
       }
 
-      if (data.user) {
+      if (data.user && data.session) {
         await upsertUser(data.user.id, email, firstName, lastName);
         (req.session as any).userId = data.user.id;
-        (req.session as any).accessToken = data.session?.access_token;
-        (req.session as any).refreshToken = data.session?.refresh_token;
+        (req.session as any).accessToken = data.session.access_token;
+        (req.session as any).refreshToken = data.session.refresh_token;
+        res.json({ user: data.user, session: data.session, requiresConfirmation: false });
+      } else if (data.user && !data.session) {
+        res.json({ user: data.user, session: null, requiresConfirmation: true });
+      } else {
+        res.status(400).json({ error: "Signup failed" });
       }
-
-      res.json({ user: data.user, session: data.session });
     } catch (error) {
       console.error("Signup error:", error);
       res.status(500).json({ error: "Failed to sign up" });

@@ -41,9 +41,16 @@ export default function Signup() {
     }
 
     try {
-      await signup({ email, password, firstName, lastName });
-      toast({ title: "Account created!", description: "Welcome to InterviewPro." });
-      setLocation("/dashboard");
+      const result = await signup({ email, password, firstName, lastName });
+      if (result.requiresConfirmation) {
+        toast({ 
+          title: "Check your email", 
+          description: "We sent you a confirmation link. Please check your inbox to verify your account." 
+        });
+      } else {
+        toast({ title: "Account created!", description: "Welcome to InterviewPro." });
+        setLocation("/dashboard");
+      }
     } catch (error: any) {
       toast({ 
         title: "Signup failed", 
