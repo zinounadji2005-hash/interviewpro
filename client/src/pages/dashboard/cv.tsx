@@ -65,10 +65,19 @@ export default function CVManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cvs"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       toast({ title: "CV optimized!", description: "View your improved CV below." });
     },
-    onError: () => {
-      toast({ title: "Optimization failed", description: "Please try again.", variant: "destructive" });
+    onError: (error: any) => {
+      if (error?.message?.includes("Insufficient credits")) {
+        toast({ 
+          title: "Insufficient credits", 
+          description: "You need 10 credits to optimize your CV.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Optimization failed", description: "Please try again.", variant: "destructive" });
+      }
     },
   });
 

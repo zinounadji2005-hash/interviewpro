@@ -62,8 +62,16 @@ export default function InterviewSessionPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       setLocation(`/dashboard/evaluation/${params.id}`);
     },
-    onError: () => {
-      toast({ title: "Failed to complete interview", variant: "destructive" });
+    onError: (error: any) => {
+      if (error?.message?.includes("Insufficient credits")) {
+        toast({ 
+          title: "Insufficient credits", 
+          description: "You need 15 credits to get your evaluation.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Failed to complete interview", variant: "destructive" });
+      }
     },
   });
 

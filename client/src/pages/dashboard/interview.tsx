@@ -55,8 +55,16 @@ export default function Interview() {
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
       setLocation(`/dashboard/interview/${data.id}`);
     },
-    onError: () => {
-      toast({ title: "Failed to start interview", description: "Please try again.", variant: "destructive" });
+    onError: (error: any) => {
+      if (error?.message?.includes("Insufficient credits")) {
+        toast({ 
+          title: "Insufficient credits", 
+          description: "You need 20 credits to start an interview.", 
+          variant: "destructive" 
+        });
+      } else {
+        toast({ title: "Failed to start interview", description: "Please try again.", variant: "destructive" });
+      }
     },
   });
 

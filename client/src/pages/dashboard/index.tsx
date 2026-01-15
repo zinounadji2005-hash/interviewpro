@@ -14,7 +14,8 @@ import {
   ArrowRight, 
   Clock,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Coins
 } from "lucide-react";
 import type { CV, InterviewSession, Evaluation } from "@shared/schema";
 
@@ -22,6 +23,7 @@ interface DashboardData {
   cvs: CV[];
   sessions: InterviewSession[];
   latestEvaluation: Evaluation | null;
+  credits: number;
 }
 
 export default function Dashboard() {
@@ -34,6 +36,8 @@ export default function Dashboard() {
   const hasCv = data?.cvs && data.cvs.length > 0;
   const hasCompletedInterview = data?.sessions?.some(s => s.status === "completed");
   const latestScore = data?.latestEvaluation?.overallScore;
+  const credits = data?.credits ?? 0;
+  const isLowCredits = credits < 30;
 
   return (
     <DashboardLayout title="Dashboard">
@@ -47,7 +51,7 @@ export default function Dashboard() {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-4">
           <Card className="border-card-border">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">CV Status</CardTitle>
@@ -112,6 +116,34 @@ export default function Dashboard() {
                 <div className="space-y-1">
                   <p className="text-2xl font-bold text-muted-foreground">--</p>
                   <p className="text-xs text-muted-foreground">Complete an interview</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className={`border-card-border ${isLowCredits ? 'border-destructive' : ''}`} data-testid="card-credits">
+            <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+              <CardTitle className="text-sm font-medium text-muted-foreground">Credits</CardTitle>
+              <Coins className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <div className="space-y-1">
+                  <p className={`text-2xl font-bold ${isLowCredits ? 'text-destructive' : ''}`} data-testid="text-credit-balance">
+                    {credits}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {isLowCredits ? (
+                      <span className="text-destructive flex items-center gap-1">
+                        <AlertCircle className="h-3 w-3" />
+                        Low balance
+                      </span>
+                    ) : (
+                      "Available for use"
+                    )}
+                  </p>
                 </div>
               )}
             </CardContent>
