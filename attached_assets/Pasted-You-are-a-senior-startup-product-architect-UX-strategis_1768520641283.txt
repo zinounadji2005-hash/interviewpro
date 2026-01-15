@@ -1,0 +1,329 @@
+You are a senior startup product architect, UX strategist, and full-stack engineer.
+Your task is to design and generate a production-ready MVP+ web application that helps job seekers significantly improve their chances of passing job interviews through structured CV optimization, AI-powered mock interviews, performance evaluation, and measurable improvement tracking.
+
+This is not a simple tool.
+It is a structured interview training system designed for real-world use.
+
+You must prioritize clarity, realism, learning value, and scalability while strictly avoiding unnecessary over-engineering.
+
+Product Vision
+
+Build a web-based platform that transforms unprepared or average job candidates into confident, structured, and interview-ready applicants by guiding them through an adaptive interview preparation journey.
+
+The system must:
+
+Evaluate
+
+Teach
+
+Measure improvement
+
+Adapt based on user weaknesses over time
+
+Target Users (Explicit Positioning)
+
+Primary audience:
+
+Fresh graduates
+
+Junior to mid-level professionals
+
+Career switchers
+
+Out of scope:
+
+Executive-level interviews
+
+Highly specialized FAANG-style deep technical interviews
+
+Core User Flow
+
+Landing Page → Registration/Login → Main Dashboard →
+CV Optimization → Interview Preparation → Mock Interview (Round 1) →
+Evaluation & Feedback → Mock Interview (Round 2) →
+Improvement Analysis → Ongoing Training Path
+
+Functional Requirements
+1. Landing Page
+
+Professional, career-focused design.
+
+Clear value proposition.
+
+Step-by-step explanation:
+Upload CV → Target Role → Improve CV → Mock Interview → Feedback → Second Interview → Progress Analysis
+
+Strong call-to-action buttons.
+
+2. Authentication
+
+Secure user registration and login (email/password).
+
+Secure session management.
+
+Simple and reliable authentication flow.
+
+3. Main Dashboard
+
+The central workspace for all user actions.
+
+Includes:
+
+CV upload (PDF / DOCX).
+
+Job role targeting:
+
+Dropdown selector for common roles OR
+
+Paste custom job description.
+
+Session history overview.
+
+Interview readiness indicators.
+
+4. AI-Powered CV Optimization
+
+Role-specific CV improvements.
+
+Strengthen achievements and impact statements.
+
+ATS optimization aligned with the selected job description:
+
+Keyword alignment
+
+Formatting explanations
+
+Side-by-side comparison:
+Original CV vs Improved CV.
+
+Clear explanations for every suggested change.
+
+5. Interview Preparation Snapshot (Before Interview)
+
+Before starting an interview, generate:
+
+What the interviewer will focus on.
+
+Top 3 skills being evaluated.
+
+Optional STAR method reminder.
+
+Purpose:
+
+Reduce anxiety.
+
+Improve answer quality.
+
+6. Interview Configuration
+
+Before each session, allow users to select:
+
+Interview type:
+
+HR
+
+Technical
+
+Behavioral
+
+Interview mode remains text-based only.
+
+7. AI Mock Interview – Round 1
+
+5–7 progressively difficult, role-relevant questions.
+
+Questions tailored to:
+
+CV
+
+Job role / description
+
+Interview type
+
+Real-time answer capture.
+
+Optional answer length guidance:
+
+“Your answer is too short”
+
+“Try to be more concise”
+
+8. Comprehensive Evaluation & Scoring
+
+After the interview, generate:
+
+Structured Score (0–100), broken down into:
+
+Communication
+
+Confidence (clarity, assertiveness, hesitation detection)
+
+Relevance
+
+Answer Structure (e.g. STAR usage)
+
+Display:
+
+Numeric scores
+
+Visual progress bars
+
+9. Executive Feedback Summary
+
+Generate a concise summary including:
+
+Top 3 critical mistakes.
+
+Top 3 improvement points.
+
+One high-impact “Focus Point” for immediate action.
+
+10. Model Answers & Educational Feedback
+
+For each interview question:
+
+Provide a strong sample answer.
+
+Explain:
+
+Why it works.
+
+What makes it effective.
+
+Highlight structure, clarity, and relevance.
+
+11. AI Mock Interview – Round 2
+
+Same interview type as Round 1.
+
+Similar difficulty with question variations.
+
+Designed specifically to measure improvement.
+
+12. Improvement Analysis Dashboard
+
+Display:
+
+Side-by-side comparison (Round 1 vs Round 2).
+
+Visual charts showing progress in each scoring category.
+
+Automatic highlighting of:
+
+Improvement
+
+Stagnation
+
+Regression
+
+Confidence trend indicator:
+Improving / Stable / Declining.
+
+13. Session History
+
+Chronological timeline of all sessions.
+
+Stored data:
+
+Scores
+
+Interview type
+
+Dates
+
+Exportable session summary (PDF).
+
+14. Weakness Pattern Detection
+
+Across multiple sessions:
+
+Detect recurring weaknesses.
+
+Generate insights such as:
+
+“You frequently give unfocused introductions.”
+
+“Your answers lack concrete examples.”
+
+Link weaknesses to job role expectations.
+
+15. Interview Readiness System (Next-Level Feature)
+
+Generate a global Interview Readiness Score based on:
+
+CV quality
+
+Interview performance
+
+Improvement velocity
+
+Use this score to:
+
+Indicate current readiness level.
+
+Guide users into an adaptive training path:
+
+“Primary focus this week: Answer structure.”
+
+UX & Design Guidelines
+
+Clean, professional, career-focused UI.
+
+Desktop-first, mobile-friendly responsive design.
+
+Progressive disclosure to avoid overwhelm.
+
+Clear visual hierarchy.
+
+Consistent tone and evaluation strictness.
+
+Technical & Architectural Guidelines
+
+Modular feature architecture.
+
+Clear separation between:
+
+Frontend
+
+Backend
+
+AI logic
+
+AI system must use structured, versioned prompts:
+
+CV analysis
+
+Interview generation
+
+Evaluation
+
+Comparison
+
+Weakness detection
+
+Memory layer to store insights and influence future sessions.
+
+Constraints
+
+No payments.
+
+No admin panel.
+
+No audio/video interviews.
+
+No gamification.
+
+Text-based interviews only.
+
+Strategic Instruction
+
+Design this as a real product, not a demo.
+Each feature must:
+
+Deliver measurable value.
+
+Be removable without breaking the system.
+
+Support future monetization without redesign.
+
+Act as if this platform will be used by real job seekers preparing for real interviews.
