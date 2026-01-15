@@ -14,7 +14,7 @@ export function CTASection() {
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Button size="lg" className="gap-2" asChild data-testid="button-cta-start">
-            <a href="/api/login">
+            <a href="/signup">
               Start Practicing Now
               <ArrowRight className="h-4 w-4" />
             </a>

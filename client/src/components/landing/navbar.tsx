@@ -33,10 +33,10 @@ export function Navbar() {
         <div className="flex items-center gap-3">
           <ThemeToggle />
           <Button variant="ghost" asChild data-testid="button-login">
-            <a href="/api/login">Log In</a>
+            <a href="/login">Log In</a>
           </Button>
           <Button asChild data-testid="button-signup">
-            <a href="/api/login">Get Started</a>
+            <a href="/signup">Get Started</a>
           </Button>
         </div>
       </div>

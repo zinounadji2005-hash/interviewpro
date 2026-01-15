@@ -29,7 +29,7 @@ export function HeroSection() {
             
             <div className="flex flex-col sm:flex-row gap-4">
               <Button size="lg" className="gap-2" asChild data-testid="button-get-started">
-                <a href="/api/login">
+                <a href="/signup">
                   Get Started Free
                   <ArrowRight className="h-4 w-4" />
                 </a>
