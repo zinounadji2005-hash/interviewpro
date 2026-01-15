@@ -33,10 +33,11 @@ Preferred communication style: Simple, everyday language.
 - **Migrations**: Drizzle Kit with push-based schema sync (`db:push`)
 
 ### Authentication
-- **Provider**: Replit Auth (OpenID Connect)
+- **Provider**: Supabase Auth (email/password)
 - **Session Storage**: PostgreSQL-backed sessions via connect-pg-simple
 - **Session Management**: Express-session with secure cookies
-- **User Storage**: Automatic upsert on login with profile sync
+- **User Storage**: Automatic upsert on login/signup with profile sync
+- **Auth Routes**: /login, /signup (frontend), /api/auth/login, /api/auth/signup, /api/auth/logout (backend)
 
 ### AI Integration
 - **Provider**: OpenAI API via Replit AI Integrations proxy
