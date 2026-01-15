@@ -45,22 +45,38 @@ function getSession() {
 
 async function upsertUser(userId: string, email: string, firstName?: string, lastName?: string) {
   try {
-    const existing = await db.select().from(users).where(eq(users.id, userId)).limit(1);
-    if (existing.length === 0) {
-      await db.insert(users).values({
-        id: userId,
-        email,
-        firstName: firstName || email.split("@")[0],
-        lastName: lastName || "",
-      });
-    } else {
+    // First check by ID
+    const existingById = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (existingById.length > 0) {
       await db.update(users).set({
         email,
-        firstName: firstName || existing[0].firstName,
-        lastName: lastName || existing[0].lastName,
+        firstName: firstName || existingById[0].firstName,
+        lastName: lastName || existingById[0].lastName,
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
+      return;
     }
+    
+    // Check if email already exists (user might have signed up with different auth provider before)
+    const existingByEmail = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    if (existingByEmail.length > 0) {
+      // Update existing user's ID to match Supabase ID
+      await db.update(users).set({
+        id: userId,
+        firstName: firstName || existingByEmail[0].firstName,
+        lastName: lastName || existingByEmail[0].lastName,
+        updatedAt: new Date(),
+      }).where(eq(users.email, email));
+      return;
+    }
+    
+    // Create new user
+    await db.insert(users).values({
+      id: userId,
+      email,
+      firstName: firstName || email.split("@")[0],
+      lastName: lastName || "",
+    });
   } catch (error) {
     console.error("Failed to upsert user:", error);
     throw error;
