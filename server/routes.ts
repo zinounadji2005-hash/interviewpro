@@ -22,14 +22,15 @@ export async function registerRoutes(
       const userId = getUserId(req);
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const [cvs, sessions, latestEvaluation, credits] = await Promise.all([
+      const [cvs, sessions, latestEvaluation, credits, readinessScore] = await Promise.all([
         storage.getCvsByUserId(userId),
         storage.getInterviewsByUserId(userId),
         storage.getLatestEvaluationByUserId(userId),
         storage.getUserCredits(userId),
+        storage.calculateReadinessScore(userId),
       ]);
 
-      res.json({ cvs, sessions, latestEvaluation, credits });
+      res.json({ cvs, sessions, latestEvaluation, credits, readinessScore });
     } catch (error) {
       console.error("Dashboard error:", error);
       res.status(500).json({ error: "Failed to load dashboard" });
@@ -370,7 +371,26 @@ export async function registerRoutes(
       }
 
       const questions = await storage.getQuestionsBySessionId(sessionId);
-      res.json({ session: { ...session, questions }, evaluation });
+      
+      const previousEvaluation = await storage.getPreviousEvaluation(sessionId, userId, session.interviewType);
+      
+      let comparison = null;
+      if (previousEvaluation) {
+        comparison = {
+          previousOverall: previousEvaluation.overallScore,
+          previousCommunication: previousEvaluation.communicationScore,
+          previousConfidence: previousEvaluation.confidenceScore,
+          previousRelevance: previousEvaluation.relevanceScore,
+          previousStructure: previousEvaluation.structureScore,
+          overallChange: evaluation.overallScore - previousEvaluation.overallScore,
+          communicationChange: evaluation.communicationScore - previousEvaluation.communicationScore,
+          confidenceChange: evaluation.confidenceScore - previousEvaluation.confidenceScore,
+          relevanceChange: evaluation.relevanceScore - previousEvaluation.relevanceScore,
+          structureChange: evaluation.structureScore - previousEvaluation.structureScore,
+        };
+      }
+      
+      res.json({ session: { ...session, questions }, evaluation, comparison });
     } catch (error) {
       console.error("Get evaluation error:", error);
       res.status(500).json({ error: "Failed to get evaluation" });

@@ -15,15 +15,24 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Coins
+  Coins,
+  Target,
+  Zap
 } from "lucide-react";
 import type { CV, InterviewSession, Evaluation } from "@shared/schema";
+
+interface ReadinessScore {
+  score: number;
+  label: "not_ready" | "improving" | "interview_ready";
+  breakdown: { cvQuality: number; interviewPerformance: number; improvementDelta: number };
+}
 
 interface DashboardData {
   cvs: CV[];
   sessions: InterviewSession[];
   latestEvaluation: Evaluation | null;
   credits: number;
+  readinessScore: ReadinessScore | null;
 }
 
 export default function Dashboard() {
@@ -38,6 +47,15 @@ export default function Dashboard() {
   const latestScore = data?.latestEvaluation?.overallScore;
   const credits = data?.credits ?? 0;
   const isLowCredits = credits < 30;
+  const readinessScore = data?.readinessScore;
+
+  const getReadinessLabel = (label: string) => {
+    switch (label) {
+      case "interview_ready": return { text: "Interview Ready", color: "text-chart-2", bgColor: "bg-chart-2/10" };
+      case "improving": return { text: "Improving", color: "text-chart-4", bgColor: "bg-chart-4/10" };
+      default: return { text: "Not Ready", color: "text-muted-foreground", bgColor: "bg-muted" };
+    }
+  };
 
   return (
     <DashboardLayout title="Dashboard">
@@ -50,6 +68,51 @@ export default function Dashboard() {
             Track your interview preparation progress and continue where you left off.
           </p>
         </div>
+
+        {readinessScore && (
+          <Card className="border-primary/20 bg-gradient-to-r from-primary/5 via-transparent to-transparent" data-testid="card-readiness-score">
+            <CardContent className="p-6">
+              <div className="flex flex-col md:flex-row items-center gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-full bg-background flex items-center justify-center border-4 border-primary/20">
+                      <span className="text-3xl font-bold">{readinessScore.score}</span>
+                    </div>
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+                      <Badge className="text-[10px]">/ 100</Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Target className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold text-lg">Interview Readiness</h3>
+                    </div>
+                    <Badge className={`${getReadinessLabel(readinessScore.label).bgColor} ${getReadinessLabel(readinessScore.label).color} border-0`}>
+                      {getReadinessLabel(readinessScore.label).text}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="flex-1 grid grid-cols-3 gap-4 w-full md:w-auto">
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <div className="text-xs text-muted-foreground mb-1">CV Quality</div>
+                    <div className="font-bold">{readinessScore.breakdown.cvQuality}%</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <div className="text-xs text-muted-foreground mb-1">Performance</div>
+                    <div className="font-bold">{readinessScore.breakdown.interviewPerformance}%</div>
+                  </div>
+                  <div className="text-center p-3 rounded-lg bg-muted/50">
+                    <div className="text-xs text-muted-foreground mb-1 flex items-center justify-center gap-1">
+                      <Zap className="h-3 w-3" /> Progress
+                    </div>
+                    <div className="font-bold">{readinessScore.breakdown.improvementDelta}%</div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid gap-6 md:grid-cols-4">
           <Card className="border-card-border">
