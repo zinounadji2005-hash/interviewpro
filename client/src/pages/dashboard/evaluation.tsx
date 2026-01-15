@@ -11,6 +11,8 @@ import {
   Trophy,
   AlertTriangle,
   TrendingUp,
+  TrendingDown,
+  Minus,
   Target,
   MessageSquare,
   Lightbulb,
@@ -20,9 +22,23 @@ import {
 } from "lucide-react";
 import type { Evaluation, InterviewSession, InterviewQuestion } from "@shared/schema";
 
+interface ComparisonData {
+  previousOverall: number;
+  previousCommunication: number;
+  previousConfidence: number;
+  previousRelevance: number;
+  previousStructure: number;
+  overallChange: number;
+  communicationChange: number;
+  confidenceChange: number;
+  relevanceChange: number;
+  structureChange: number;
+}
+
 interface EvaluationData {
   session: InterviewSession & { questions: InterviewQuestion[] };
   evaluation: Evaluation;
+  comparison: ComparisonData | null;
 }
 
 const scoreCategories = [
@@ -42,6 +58,22 @@ function getProgressColor(score: number): string {
   if (score >= 80) return "bg-chart-2";
   if (score >= 60) return "bg-chart-4";
   return "bg-destructive";
+}
+
+function getChangeLabel(change: number): { text: string; color: string; icon: "up" | "down" | "same" } {
+  if (change > 0) return { text: `+${change}`, color: "text-chart-2", icon: "up" };
+  if (change < 0) return { text: `${change}`, color: "text-destructive", icon: "down" };
+  return { text: "No change", color: "text-muted-foreground", icon: "same" };
+}
+
+function getChangeKey(key: string): string {
+  const map: Record<string, string> = {
+    communicationScore: "communicationChange",
+    confidenceScore: "confidenceChange",
+    relevanceScore: "relevanceChange",
+    structureScore: "structureChange",
+  };
+  return map[key] || "";
 }
 
 export default function EvaluationPage() {
@@ -75,7 +107,7 @@ export default function EvaluationPage() {
     );
   }
 
-  const { session, evaluation } = data;
+  const { session, evaluation, comparison } = data;
   const mistakes = evaluation.topMistakes as string[] || [];
   const improvements = evaluation.topImprovements as string[] || [];
 
@@ -116,14 +148,57 @@ export default function EvaluationPage() {
           </div>
         </Card>
 
+        {comparison && (
+          <Card className="border-chart-4/30 bg-chart-4/5" data-testid="card-comparison-summary">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  {comparison.overallChange > 0 ? (
+                    <div className="p-2 rounded-lg bg-chart-2/20">
+                      <TrendingUp className="h-5 w-5 text-chart-2" />
+                    </div>
+                  ) : comparison.overallChange < 0 ? (
+                    <div className="p-2 rounded-lg bg-destructive/20">
+                      <TrendingDown className="h-5 w-5 text-destructive" />
+                    </div>
+                  ) : (
+                    <div className="p-2 rounded-lg bg-muted">
+                      <Minus className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div>
+                    <h3 className="font-semibold">Compared to Previous {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Previous score: {comparison.previousOverall}
+                    </p>
+                  </div>
+                </div>
+                <div className="text-center sm:text-right">
+                  <div className={`text-2xl font-bold ${comparison.overallChange > 0 ? "text-chart-2" : comparison.overallChange < 0 ? "text-destructive" : "text-muted-foreground"}`}>
+                    {comparison.overallChange > 0 ? "+" : ""}{comparison.overallChange} points
+                  </div>
+                  <Badge variant={comparison.overallChange > 0 ? "default" : comparison.overallChange < 0 ? "destructive" : "secondary"}>
+                    {comparison.overallChange > 0 ? "Improved" : comparison.overallChange < 0 ? "Needs Work" : "Stable"}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid md:grid-cols-2 gap-6">
           <Card className="border-card-border">
             <CardHeader>
               <CardTitle className="text-lg">Score Breakdown</CardTitle>
+              {comparison && <CardDescription>Showing change from previous session</CardDescription>}
             </CardHeader>
             <CardContent className="space-y-5">
               {scoreCategories.map(({ key, label, icon: Icon, description }) => {
                 const score = (evaluation as any)[key] as number;
+                const changeKey = getChangeKey(key);
+                const change = comparison ? (comparison as any)[changeKey] as number : null;
+                const changeLabel = change !== null ? getChangeLabel(change) : null;
+                
                 return (
                   <div key={key} className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -131,7 +206,17 @@ export default function EvaluationPage() {
                         <Icon className="h-4 w-4 text-muted-foreground" />
                         <span className="font-medium text-sm">{label}</span>
                       </div>
-                      <span className={`font-bold ${getScoreColor(score)}`}>{score}</span>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold ${getScoreColor(score)}`}>{score}</span>
+                        {changeLabel && (
+                          <span className={`flex items-center gap-0.5 text-xs font-medium ${changeLabel.color}`}>
+                            {changeLabel.icon === "up" && <TrendingUp className="h-3 w-3" />}
+                            {changeLabel.icon === "down" && <TrendingDown className="h-3 w-3" />}
+                            {changeLabel.icon === "same" && <Minus className="h-3 w-3" />}
+                            {changeLabel.text}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     <Progress 
                       value={score} 

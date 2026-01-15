@@ -56,6 +56,21 @@ Preferred communication style: Simple, everyday language.
 - **Error Handling**: HTTP 402 for insufficient credits with descriptive messages
 - **UI**: Credit balance card on dashboard with low-balance warning (<30 credits)
 
+### Intelligence Layer
+- **Executive Feedback Summary**: After each interview evaluation:
+  - Top 3 critical mistakes
+  - Top 3 improvement points
+  - 1 Focus Point (single most impactful action)
+- **Round Comparison**: When viewing evaluation of 2nd+ interview:
+  - Compares scores with previous interview of same type
+  - Shows change labels: Improved/No change/Regressed per dimension
+  - Displays overall point change prominently
+- **Interview Readiness Score**: Weighted aggregate displayed on dashboard:
+  - CV quality (25% weight, from ATS score)
+  - Interview performance (50% weight, latest overall score)
+  - Improvement delta (25% weight, change from previous session)
+  - Labels: Not Ready (<50), Improving (50-69), Interview Ready (70+)
+
 ### Project Structure
 ```
 client/           # React frontend

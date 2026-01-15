@@ -49,6 +49,12 @@ export interface IStorage {
   getSessionsWithEvaluations(userId: string): Promise<(InterviewSession & { evaluation: Evaluation | null })[]>;
   getLatestEvaluationByUserId(userId: string): Promise<Evaluation | null>;
   getComparisonData(userId: string): Promise<{ round1: Evaluation | null; round2: Evaluation | null } | null>;
+  getPreviousEvaluation(sessionId: number, userId: string, interviewType: string): Promise<Evaluation | null>;
+  calculateReadinessScore(userId: string): Promise<{
+    score: number;
+    label: "not_ready" | "improving" | "interview_ready";
+    breakdown: { cvQuality: number; interviewPerformance: number; improvementDelta: number };
+  } | null>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -199,6 +205,70 @@ export class DatabaseStorage implements IStorage {
     const round2 = await this.getEvaluationBySessionId(completedSessions[1].id);
 
     return { round1: round1 || null, round2: round2 || null };
+  }
+
+  async calculateReadinessScore(userId: string): Promise<{
+    score: number;
+    label: "not_ready" | "improving" | "interview_ready";
+    breakdown: { cvQuality: number; interviewPerformance: number; improvementDelta: number };
+  } | null> {
+    const [latestCv, evaluationsWithSessions] = await Promise.all([
+      db.select().from(cvs).where(eq(cvs.userId, userId)).orderBy(desc(cvs.createdAt)).limit(1),
+      this.getSessionsWithEvaluations(userId),
+    ]);
+
+    const completedEvaluations = evaluationsWithSessions
+      .filter(s => s.status === "completed" && s.evaluation)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    if (completedEvaluations.length === 0) return null;
+
+    const cvQuality = latestCv.length > 0 && latestCv[0].analysis 
+      ? (latestCv[0].analysis as any).atsScore ?? 50 
+      : 50;
+
+    const latestEval = completedEvaluations[0].evaluation!;
+    const interviewPerformance = latestEval.overallScore;
+
+    let improvementDelta = 50;
+    if (completedEvaluations.length >= 2) {
+      const previousEval = completedEvaluations[1].evaluation!;
+      const delta = latestEval.overallScore - previousEval.overallScore;
+      improvementDelta = Math.max(0, Math.min(100, 50 + delta * 2));
+    }
+
+    const score = Math.round(
+      (cvQuality * 0.25) + (interviewPerformance * 0.50) + (improvementDelta * 0.25)
+    );
+
+    let label: "not_ready" | "improving" | "interview_ready" = "not_ready";
+    if (score >= 70) {
+      label = "interview_ready";
+    } else if (score >= 50 || improvementDelta > 50) {
+      label = "improving";
+    }
+
+    return { score, label, breakdown: { cvQuality, interviewPerformance, improvementDelta } };
+  }
+
+  async getPreviousEvaluation(sessionId: number, userId: string, interviewType: string): Promise<Evaluation | null> {
+    const currentSession = await this.getInterviewSession(sessionId);
+    if (!currentSession) return null;
+
+    const previousSessions = await db.select().from(interviewSessions)
+      .where(and(
+        eq(interviewSessions.userId, userId),
+        eq(interviewSessions.interviewType, interviewType),
+        eq(interviewSessions.status, "completed")
+      ))
+      .orderBy(desc(interviewSessions.createdAt));
+
+    const currentIndex = previousSessions.findIndex(s => s.id === sessionId);
+    if (currentIndex === -1 || currentIndex >= previousSessions.length - 1) return null;
+
+    const previousSession = previousSessions[currentIndex + 1];
+    const evaluation = await this.getEvaluationBySessionId(previousSession.id);
+    return evaluation || null;
   }
 }
 
