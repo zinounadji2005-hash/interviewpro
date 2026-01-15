@@ -43,7 +43,7 @@ function getSession() {
   });
 }
 
-async function upsertUser(userId: string, email: string, firstName?: string, lastName?: string) {
+async function upsertUser(userId: string, email: string, firstName?: string, lastName?: string): Promise<string> {
   try {
     // First check by ID
     const existingById = await db.select().from(users).where(eq(users.id, userId)).limit(1);
@@ -54,20 +54,20 @@ async function upsertUser(userId: string, email: string, firstName?: string, las
         lastName: lastName || existingById[0].lastName,
         updatedAt: new Date(),
       }).where(eq(users.id, userId));
-      return;
+      return userId;
     }
     
     // Check if email already exists (user might have signed up with different auth provider before)
     const existingByEmail = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (existingByEmail.length > 0) {
-      // Update existing user's ID to match Supabase ID
+      // Keep existing user ID to preserve foreign key relationships
+      // Just update the profile info
       await db.update(users).set({
-        id: userId,
         firstName: firstName || existingByEmail[0].firstName,
         lastName: lastName || existingByEmail[0].lastName,
         updatedAt: new Date(),
       }).where(eq(users.email, email));
-      return;
+      return existingByEmail[0].id; // Return existing ID
     }
     
     // Create new user
@@ -77,6 +77,7 @@ async function upsertUser(userId: string, email: string, firstName?: string, las
       firstName: firstName || email.split("@")[0],
       lastName: lastName || "",
     });
+    return userId;
   } catch (error) {
     console.error("Failed to upsert user:", error);
     throw error;
@@ -108,8 +109,8 @@ export async function setupSupabaseAuth(app: Express) {
       }
 
       if (data.user && data.session) {
-        await upsertUser(data.user.id, email, firstName, lastName);
-        (req.session as any).userId = data.user.id;
+        const dbUserId = await upsertUser(data.user.id, email, firstName, lastName);
+        (req.session as any).userId = dbUserId;
         (req.session as any).accessToken = data.session.access_token;
         (req.session as any).refreshToken = data.session.refresh_token;
         res.json({ user: data.user, session: data.session, requiresConfirmation: false });
@@ -142,8 +143,8 @@ export async function setupSupabaseAuth(app: Express) {
       }
 
       if (data.user) {
-        await upsertUser(data.user.id, email, data.user.user_metadata?.first_name, data.user.user_metadata?.last_name);
-        (req.session as any).userId = data.user.id;
+        const dbUserId = await upsertUser(data.user.id, email, data.user.user_metadata?.first_name, data.user.user_metadata?.last_name);
+        (req.session as any).userId = dbUserId;
         (req.session as any).accessToken = data.session?.access_token;
         (req.session as any).refreshToken = data.session?.refresh_token;
       }
