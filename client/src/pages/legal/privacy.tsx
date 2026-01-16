@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function Privacy() {
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
+    <div className="min-h-screen bg-background py-4 sm:py-8 px-4">
       <div className="container mx-auto max-w-4xl">
         <Link href="/">
           <Button variant="ghost" size="sm" className="mb-6" data-testid="button-back-home">
@@ -17,11 +17,11 @@ export default function Privacy() {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-3xl font-heading">Privacy Policy</CardTitle>
+            <CardTitle className="text-2xl sm:text-3xl font-heading">Privacy Policy</CardTitle>
             <p className="text-sm text-muted-foreground">Last updated: January 2026</p>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-280px)]">
+            <ScrollArea className="h-[calc(100vh-240px)] sm:h-[calc(100vh-280px)]">
               <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
                 <section>
                   <h2>1. Introduction</h2>

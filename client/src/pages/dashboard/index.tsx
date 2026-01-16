@@ -59,9 +59,9 @@ export default function Dashboard() {
 
   return (
     <DashboardLayout title="Dashboard">
-      <div className="p-6 max-w-7xl mx-auto space-y-8">
+      <div className="p-4 sm:p-6 max-w-7xl mx-auto space-y-6 sm:space-y-8">
         <div className="space-y-2">
-          <h2 className="font-serif text-2xl font-bold">
+          <h2 className="font-serif text-xl sm:text-2xl font-bold">
             Welcome back{user?.firstName ? `, ${user.firstName}` : ""}!
           </h2>
           <p className="text-muted-foreground">
@@ -114,7 +114,7 @@ export default function Dashboard() {
           </Card>
         )}
 
-        <div className="grid gap-6 md:grid-cols-4">
+        <div className="grid gap-4 sm:gap-6 grid-cols-2 md:grid-cols-4">
           <Card className="border-card-border">
             <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">CV Status</CardTitle>
