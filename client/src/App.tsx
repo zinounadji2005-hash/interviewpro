@@ -15,6 +15,7 @@ import InterviewSession from "@/pages/dashboard/interview-session";
 import Evaluation from "@/pages/dashboard/evaluation";
 import Progress from "@/pages/dashboard/progress";
 import History from "@/pages/dashboard/history";
+import Logout from "@/pages/logout";
 import NotFound from "@/pages/not-found";
 
 function AuthenticatedRoutes() {
@@ -53,6 +54,7 @@ function Router() {
       </Route>
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/logout" component={Logout} />
       {user ? (
         <AuthenticatedRoutes />
       ) : (

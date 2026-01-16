@@ -104,10 +104,10 @@ export function AppSidebar() {
           asChild
           data-testid="button-logout"
         >
-          <a href="/api/logout">
+          <Link href="/logout">
             <LogOut className="h-4 w-4" />
             <span>Log Out</span>
-          </a>
+          </Link>
         </Button>
       </SidebarFooter>
     </Sidebar>
