@@ -1,20 +1,32 @@
-import { useState } from "react";
-import { useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useLocation, useSearch } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
   const { login, isLoggingIn } = useAuth();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchString);
+    if (params.get("verified") === "true") {
+      setEmailVerified(true);
+      // Clean up URL without refreshing the page
+      window.history.replaceState({}, "", "/login");
+    }
+  }, [searchString]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -49,6 +61,15 @@ export default function Login() {
         />
         <span className="text-2xl font-bold font-heading">InterviewPro</span>
       </div>
+
+      {emailVerified && (
+        <Alert className="w-full max-w-md mb-4 border-emerald-500/50 bg-emerald-500/10" data-testid="alert-email-verified">
+          <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+          <AlertDescription className="text-emerald-600 dark:text-emerald-400">
+            Your email has been successfully verified. Please log in to continue.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">

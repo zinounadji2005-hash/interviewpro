@@ -1,0 +1,69 @@
+You are working on a production web application using:
+- Supabase as the primary authentication and database system
+- Replit as the backend execution environment (APIs, AI logic, orchestration)
+
+Goal:
+Improve reliability, consistency, and real-time synchronization between Replit services and Supabase databases.
+
+Architecture Principles:
+- Supabase is the single source of truth for users and core data.
+- Replit must never create or assume user state independently.
+- All user-related operations must be validated against Supabase.
+
+Required Improvements:
+
+1. Authentication & User Identity
+- Use Supabase Auth as the only authentication provider.
+- Every request handled by Replit must:
+  - Receive a Supabase access token
+  - Validate the token using Supabase client or JWT verification
+- User identity (user_id) must always come from Supabase Auth, never from client input.
+
+2. Event-Based Synchronization
+- Implement database triggers or Supabase webhooks for key events:
+  - User registration
+  - Email verification
+  - Credit purchase
+  - Interview session creation
+- Replit should react to these events instead of polling the database.
+
+3. Real-Time Data Consistency
+- Use Supabase Realtime subscriptions where appropriate.
+- Ensure Replit listens to INSERT / UPDATE events for:
+  - users
+  - credits
+  - interview_sessions
+- Update in-memory state or cache only as a temporary optimization.
+
+4. Idempotency & Safety
+- All write operations from Replit to Supabase must be idempotent.
+- Prevent duplicate inserts (e.g. double user creation).
+- Use unique constraints and upserts where applicable.
+
+5. Error Handling & Recovery
+- Log synchronization failures clearly.
+- Implement retry logic with backoff for transient errors.
+- Never silently fail when Supabase writes are unsuccessful.
+
+6. Environment Separation
+- Ensure separate Supabase projects or schemas for:
+  - development
+  - production
+- Replit environment variables must match the correct Supabase instance.
+- No localhost or mixed environments.
+
+7. Performance Optimization
+- Avoid full-table queries for counts or lookups.
+- Use database views or RPC functions for:
+  - user counts
+  - credit balances
+  - session summaries
+- Minimize round trips between Replit and Supabase.
+
+Constraints:
+- Do not duplicate user data across systems.
+- Do not store sensitive auth data outside Supabase.
+- Do not rely on Replit as a long-term data store.
+
+Outcome:
+A robust, production-ready synchronization model where Supabase controls state and Replit executes logic safely and consistently.
