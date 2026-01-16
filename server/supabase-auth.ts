@@ -139,14 +139,20 @@ export async function setupSupabaseAuth(app: Express) {
         return res.status(400).json({ error: error.message });
       }
 
-      if (data.user && data.session) {
+      if (data.user) {
+        // Always create user in local database during signup, even if email verification is pending
         const dbUserId = await upsertUser(data.user.id, email, firstName, lastName);
-        (req.session as any).userId = dbUserId;
-        (req.session as any).accessToken = data.session.access_token;
-        (req.session as any).refreshToken = data.session.refresh_token;
-        res.json({ user: data.user, session: data.session, requiresConfirmation: false });
-      } else if (data.user && !data.session) {
-        res.json({ user: data.user, session: null, requiresConfirmation: true });
+        
+        if (data.session) {
+          // User is immediately logged in (no email verification required)
+          (req.session as any).userId = dbUserId;
+          (req.session as any).accessToken = data.session.access_token;
+          (req.session as any).refreshToken = data.session.refresh_token;
+          res.json({ user: data.user, session: data.session, requiresConfirmation: false });
+        } else {
+          // Email verification required - user created but not logged in
+          res.json({ user: data.user, session: null, requiresConfirmation: true });
+        }
       } else {
         res.status(400).json({ error: "Signup failed" });
       }
@@ -252,3 +258,67 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   (req as any).user = { claims: { sub: userId } };
   next();
 };
+
+// Admin function to sync all users from Supabase Auth to local database
+export async function syncUsersFromSupabase(): Promise<{ synced: number; errors: string[] }> {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!serviceRoleKey) {
+    throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for user sync");
+  }
+  
+  // Create admin client with service role key
+  const adminClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  });
+  
+  let synced = 0;
+  const errors: string[] = [];
+  let page = 1;
+  const perPage = 100;
+  
+  try {
+    // Fetch all users from Supabase Auth using pagination
+    while (true) {
+      const { data: { users: supabaseUsers }, error } = await adminClient.auth.admin.listUsers({
+        page,
+        perPage
+      });
+      
+      if (error) {
+        throw new Error(`Failed to fetch users: ${error.message}`);
+      }
+      
+      if (!supabaseUsers || supabaseUsers.length === 0) {
+        break;
+      }
+      
+      // Sync each user to local database
+      for (const user of supabaseUsers) {
+        try {
+          const firstName = user.user_metadata?.first_name || user.email?.split("@")[0] || "User";
+          const lastName = user.user_metadata?.last_name || "";
+          
+          await upsertUser(user.id, user.email || "", firstName, lastName);
+          synced++;
+          console.log(`Synced user: ${user.email}`);
+        } catch (err: any) {
+          errors.push(`Failed to sync ${user.email}: ${err.message}`);
+          console.error(`Failed to sync user ${user.email}:`, err);
+        }
+      }
+      
+      if (supabaseUsers.length < perPage) {
+        break;
+      }
+      page++;
+    }
+    
+    return { synced, errors };
+  } catch (error: any) {
+    throw new Error(`User sync failed: ${error.message}`);
+  }
+}
