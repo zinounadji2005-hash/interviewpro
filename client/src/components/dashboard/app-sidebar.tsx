@@ -5,8 +5,7 @@ import {
   MessageSquare, 
   TrendingUp, 
   History, 
-  LogOut,
-  Briefcase
+  LogOut
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,9 +46,11 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-4 border-b border-sidebar-border">
         <Link href="/dashboard" className="flex items-center gap-3" data-testid="link-sidebar-logo">
-          <div className="h-9 w-9 rounded-lg bg-sidebar-primary flex items-center justify-center">
-            <Briefcase className="h-5 w-5 text-sidebar-primary-foreground" />
-          </div>
+          <img 
+            src="/assets/logo.png" 
+            alt="InterviewPro Logo" 
+            className="h-9 w-9 rounded-lg object-cover"
+          />
           <span className="font-serif font-bold text-lg">InterviewPro</span>
         </Link>
       </SidebarHeader>
