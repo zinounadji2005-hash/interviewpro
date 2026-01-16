@@ -213,16 +213,36 @@ export default function VoiceInterview() {
   const playAudio = useCallback((base64Audio: string) => {
     if (audioElementRef.current) {
       audioElementRef.current.pause();
+      audioElementRef.current = null;
     }
     
-    const audio = new Audio(`data:audio/mp3;base64,${base64Audio}`);
-    audioElementRef.current = audio;
-    
-    audio.onplay = () => setIsPlaying(true);
-    audio.onended = () => setIsPlaying(false);
-    audio.onerror = () => setIsPlaying(false);
-    
-    audio.play().catch(console.error);
+    try {
+      const audio = new Audio(`data:audio/mp3;base64,${base64Audio}`);
+      audioElementRef.current = audio;
+      
+      setIsPlaying(true);
+      
+      audio.onended = () => {
+        setIsPlaying(false);
+        audioElementRef.current = null;
+      };
+      audio.onerror = (e) => {
+        console.error("Audio playback error:", e);
+        setIsPlaying(false);
+        audioElementRef.current = null;
+      };
+      audio.onpause = () => {
+        setIsPlaying(false);
+      };
+      
+      audio.play().catch((error) => {
+        console.error("Failed to play audio:", error);
+        setIsPlaying(false);
+      });
+    } catch (error) {
+      console.error("Audio creation error:", error);
+      setIsPlaying(false);
+    }
   }, []);
 
   const startRecording = async () => {
@@ -534,9 +554,25 @@ export default function VoiceInterview() {
           </div>
           
           {isPlaying && (
-            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-              <Volume2 className="h-4 w-4 animate-pulse" />
-              Speaking...
+            <div className="mt-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Volume2 className="h-4 w-4 animate-pulse" />
+                Speaking...
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => {
+                  if (audioElementRef.current) {
+                    audioElementRef.current.pause();
+                    audioElementRef.current = null;
+                  }
+                  setIsPlaying(false);
+                }}
+                data-testid="button-skip-audio"
+              >
+                Skip
+              </Button>
             </div>
           )}
         </CardContent>
