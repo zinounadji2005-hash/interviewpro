@@ -96,7 +96,8 @@ export async function registerRoutes(
       let textContent = "";
       
       if (file.mimetype === "application/pdf") {
-        const pdfParse = (await import("pdf-parse")).default;
+        const pdfParseModule = await import("pdf-parse") as any;
+        const pdfParse = pdfParseModule.default || pdfParseModule;
         const pdfData = await pdfParse(file.buffer);
         textContent = pdfData.text;
       } else if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
