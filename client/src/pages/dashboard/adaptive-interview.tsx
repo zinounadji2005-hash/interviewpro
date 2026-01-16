@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -67,16 +67,16 @@ export default function AdaptiveInterviewPage() {
     refetchOnMount: true,
   });
 
-  useState(() => {
-    if (session?.currentQuestion) {
+  useEffect(() => {
+    if (session?.currentQuestion && !currentQuestion) {
       setCurrentQuestion(session.currentQuestion);
     }
-  });
+  }, [session]);
 
   const submitAnswerMutation = useMutation({
     mutationFn: async (data: { questionId: number; answer: string }) => {
       const response = await apiRequest("POST", `/api/interviews/${params.id}/adaptive-answer`, data);
-      return response as AdaptiveAnswerResponse;
+      return response.json() as Promise<AdaptiveAnswerResponse>;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/interviews", params.id] });
@@ -110,7 +110,8 @@ export default function AdaptiveInterviewPage() {
 
   const finishInterviewMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", `/api/interviews/${params.id}/finish`);
+      const response = await apiRequest("POST", `/api/interviews/${params.id}/finish`);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/interviews"] });
