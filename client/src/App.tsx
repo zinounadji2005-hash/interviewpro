@@ -8,6 +8,7 @@ import { useAuth } from "@/hooks/use-auth";
 import Landing from "@/pages/landing";
 import Login from "@/pages/auth/login";
 import Signup from "@/pages/auth/signup";
+import ForgotPassword from "@/pages/auth/forgot-password";
 import Dashboard from "@/pages/dashboard/index";
 import CVManager from "@/pages/dashboard/cv";
 import Interview from "@/pages/dashboard/interview";
@@ -54,6 +55,7 @@ function Router() {
       </Route>
       <Route path="/login" component={Login} />
       <Route path="/signup" component={Signup} />
+      <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/logout" component={Logout} />
       {user ? (
         <AuthenticatedRoutes />
