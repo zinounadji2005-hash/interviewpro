@@ -17,6 +17,7 @@ import Evaluation from "@/pages/dashboard/evaluation";
 import Progress from "@/pages/dashboard/progress";
 import History from "@/pages/dashboard/history";
 import VoiceInterview from "@/pages/dashboard/voice-interview";
+import AdaptiveInterview from "@/pages/dashboard/adaptive-interview";
 import Logout from "@/pages/logout";
 import NotFound from "@/pages/not-found";
 
@@ -27,6 +28,7 @@ function AuthenticatedRoutes() {
       <Route path="/dashboard/cv" component={CVManager} />
       <Route path="/dashboard/interview" component={Interview} />
       <Route path="/dashboard/interview/:id" component={InterviewSession} />
+      <Route path="/dashboard/adaptive-interview/:id" component={AdaptiveInterview} />
       <Route path="/dashboard/evaluation/:id" component={Evaluation} />
       <Route path="/dashboard/progress" component={Progress} />
       <Route path="/dashboard/history" component={History} />
