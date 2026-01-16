@@ -11,6 +11,33 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
 
 let supabase: SupabaseClient | null = null;
 
+function getBaseUrl(req?: { protocol: string; get: (name: string) => string | undefined }): string {
+  // In production, use REPLIT_DOMAINS or REPLIT_DEV_DOMAIN
+  const replitDomains = process.env.REPLIT_DOMAINS;
+  const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
+  
+  if (replitDomains) {
+    // REPLIT_DOMAINS contains comma-separated list, use first one
+    const primaryDomain = replitDomains.split(",")[0].trim();
+    return `https://${primaryDomain}`;
+  }
+  
+  if (replitDevDomain) {
+    return `https://${replitDevDomain}`;
+  }
+  
+  // Fallback to request host if available
+  if (req) {
+    const host = req.get("host");
+    if (host && !host.includes("localhost")) {
+      return `${req.protocol}://${host}`;
+    }
+  }
+  
+  // Development fallback
+  return "http://localhost:5000";
+}
+
 function getSupabase(): SupabaseClient {
   if (!supabase) {
     if (!supabaseUrl || !supabaseAnonKey) {
@@ -96,11 +123,15 @@ export async function setupSupabaseAuth(app: Express) {
         return res.status(400).json({ error: "Email and password are required" });
       }
 
+      const baseUrl = getBaseUrl(req);
+      const emailRedirectTo = `${baseUrl}/login?verified=true`;
+      
       const { data, error } = await getSupabase().auth.signUp({
         email,
         password,
         options: {
-          data: { first_name: firstName, last_name: lastName }
+          data: { first_name: firstName, last_name: lastName },
+          emailRedirectTo,
         }
       });
 
@@ -173,8 +204,9 @@ export async function setupSupabaseAuth(app: Express) {
         return res.status(400).json({ error: "Email is required" });
       }
 
+      const baseUrl = getBaseUrl(req);
       const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
-        redirectTo: `${req.protocol}://${req.get('host')}/reset-password`,
+        redirectTo: `${baseUrl}/reset-password`,
       });
 
       if (error) {
