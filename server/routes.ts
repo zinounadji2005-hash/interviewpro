@@ -613,7 +613,7 @@ export async function registerRoutes(
     }
   });
 
-  const voiceInterviewSessions = new Map<string, { state: VoiceInterviewState; cvText: string; interviewType: string; targetRole?: string }>();
+  const voiceInterviewSessions = new Map<string, { state: VoiceInterviewState; cvText: string; interviewType: string; targetRole?: string; dbSessionId: number }>();
 
   app.post("/api/voice-interview/start", isAuthenticated, async (req: Request, res: Response) => {
     try {
@@ -642,6 +642,13 @@ export async function registerRoutes(
 
       await storage.deductCredits(userId, creditCost);
 
+      const dbSession = await storage.createInterviewSession({
+        userId,
+        cvId: cvId ? Number(cvId) : null,
+        interviewType: `voice_${interviewType}`,
+        status: "in_progress",
+      });
+
       const sessionKey = `${userId}-${Date.now()}`;
       const state = createInitialVoiceState();
 
@@ -650,6 +657,7 @@ export async function registerRoutes(
         cvText: cv.originalText,
         interviewType,
         targetRole,
+        dbSessionId: dbSession.id,
       });
 
       const { questionText, state: updatedState } = await generateNextQuestion(
@@ -662,6 +670,12 @@ export async function registerRoutes(
       voiceInterviewSessions.set(sessionKey, {
         ...voiceInterviewSessions.get(sessionKey)!,
         state: updatedState,
+      });
+
+      await storage.createInterviewQuestion({
+        sessionId: dbSession.id,
+        questionNumber: 1,
+        questionText,
       });
 
       const audioBuffer = await synthesizeSpeech(questionText);
@@ -700,12 +714,60 @@ export async function registerRoutes(
       const audioBuffer = Buffer.from(audio, "base64");
       const answerText = await transcribeAudio(audioBuffer, audioFormat);
 
-      const { state: stateAfterAnswer } = await processAnswer(session.state, answerText);
+      const currentQuestionNumber = session.state.questionNumber;
+      const dbQuestions = await storage.getQuestionsBySessionId(session.dbSessionId);
+      const currentDbQuestion = dbQuestions.find(q => q.questionNumber === currentQuestionNumber);
+      if (currentDbQuestion) {
+        await storage.updateInterviewQuestion(currentDbQuestion.id, { userAnswer: answerText });
+      }
+
+      const { state: stateAfterAnswer, evaluation } = await processAnswer(session.state, answerText);
 
       if (stateAfterAnswer.isComplete) {
         const closingMessage = generateClosingMessage();
         const closingAudio = await synthesizeSpeech(closingMessage);
         const scores = calculateFinalScores(stateAfterAnswer);
+
+        const qaHistoryRaw = stateAfterAnswer.conversationHistory
+          .reduce((acc: { question: string; answer: string }[], entry, idx) => {
+            if (entry.role === "interviewer") {
+              acc.push({ question: entry.content, answer: "" });
+            } else if (entry.role === "candidate" && acc.length > 0) {
+              acc[acc.length - 1].answer = entry.content;
+            }
+            return acc;
+          }, []);
+
+        const qaHistory = qaHistoryRaw.filter(qa => qa.answer.trim() !== "");
+
+        const individualScores = stateAfterAnswer.internalEvaluations
+          .slice(0, qaHistory.length)
+          .map(e => ({
+            communication: e.communication,
+            confidence: e.confidence,
+            relevance: e.relevance,
+            structure: e.structure,
+          }));
+
+        const evalResult = await generateSessionEvaluation(qaHistory, individualScores);
+
+        await storage.createEvaluation({
+          sessionId: session.dbSessionId,
+          overallScore: evalResult.overallScore,
+          communicationScore: evalResult.communicationScore,
+          confidenceScore: evalResult.confidenceScore,
+          relevanceScore: evalResult.relevanceScore,
+          structureScore: evalResult.structureScore,
+          topMistakes: evalResult.topMistakes,
+          topImprovements: evalResult.topImprovements,
+          focusPoint: evalResult.focusPoint,
+          detailedFeedback: evalResult.detailedFeedback,
+        });
+
+        await storage.updateInterviewSession(session.dbSessionId, {
+          status: "completed",
+          completedAt: new Date(),
+        });
 
         voiceInterviewSessions.delete(sessionKey);
 
@@ -716,6 +778,7 @@ export async function registerRoutes(
           closingAudio: closingAudio.toString("base64"),
           scores,
           conversationHistory: stateAfterAnswer.conversationHistory,
+          sessionId: session.dbSessionId,
         });
       }
 
@@ -729,6 +792,12 @@ export async function registerRoutes(
       voiceInterviewSessions.set(sessionKey, {
         ...session,
         state: updatedState,
+      });
+
+      await storage.createInterviewQuestion({
+        sessionId: session.dbSessionId,
+        questionNumber: updatedState.questionNumber,
+        questionText,
       });
 
       const questionAudio = await synthesizeSpeech(questionText);
@@ -767,6 +836,51 @@ export async function registerRoutes(
       const closingMessage = generateClosingMessage();
       const closingAudio = await synthesizeSpeech(closingMessage);
 
+      if (session.state.conversationHistory.length > 0) {
+        const qaHistoryRaw = session.state.conversationHistory
+          .reduce((acc: { question: string; answer: string }[], entry, idx) => {
+            if (entry.role === "interviewer") {
+              acc.push({ question: entry.content, answer: "" });
+            } else if (entry.role === "candidate" && acc.length > 0) {
+              acc[acc.length - 1].answer = entry.content;
+            }
+            return acc;
+          }, []);
+
+        const qaHistory = qaHistoryRaw.filter(qa => qa.answer.trim() !== "");
+
+        const individualScores = session.state.internalEvaluations
+          .slice(0, qaHistory.length)
+          .map(e => ({
+            communication: e.communication,
+            confidence: e.confidence,
+            relevance: e.relevance,
+            structure: e.structure,
+          }));
+
+        if (qaHistory.length > 0 && individualScores.length > 0) {
+          const evalResult = await generateSessionEvaluation(qaHistory, individualScores);
+
+          await storage.createEvaluation({
+            sessionId: session.dbSessionId,
+            overallScore: evalResult.overallScore,
+            communicationScore: evalResult.communicationScore,
+            confidenceScore: evalResult.confidenceScore,
+            relevanceScore: evalResult.relevanceScore,
+            structureScore: evalResult.structureScore,
+            topMistakes: evalResult.topMistakes,
+            topImprovements: evalResult.topImprovements,
+            focusPoint: evalResult.focusPoint,
+            detailedFeedback: evalResult.detailedFeedback,
+          });
+        }
+
+        await storage.updateInterviewSession(session.dbSessionId, {
+          status: "completed",
+          completedAt: new Date(),
+        });
+      }
+
       voiceInterviewSessions.delete(sessionKey);
 
       res.json({
@@ -775,6 +889,7 @@ export async function registerRoutes(
         closingAudio: closingAudio.toString("base64"),
         scores,
         conversationHistory: session.state.conversationHistory,
+        sessionId: session.dbSessionId,
       });
     } catch (error) {
       console.error("Voice interview end error:", error);

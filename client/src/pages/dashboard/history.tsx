@@ -12,7 +12,8 @@ import {
   History as HistoryIcon,
   CheckCircle2,
   AlertCircle,
-  TrendingUp
+  TrendingUp,
+  Mic
 } from "lucide-react";
 import type { InterviewSession, Evaluation } from "@shared/schema";
 
@@ -35,6 +36,18 @@ function getScoreBadgeVariant(score: number): "default" | "secondary" | "destruc
   if (score >= 80) return "default";
   if (score >= 60) return "secondary";
   return "destructive";
+}
+
+function formatInterviewType(type: string): string {
+  if (type.startsWith("voice_")) {
+    const baseType = type.replace("voice_", "");
+    return `Voice ${baseType.charAt(0).toUpperCase() + baseType.slice(1)}`;
+  }
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
+function isVoiceInterview(type: string): boolean {
+  return type.startsWith("voice_");
 }
 
 export default function HistoryPage() {
@@ -97,14 +110,20 @@ export default function HistoryPage() {
                       <div className={`p-3 rounded-xl ${
                         session.status === "completed" ? "bg-chart-2/10" : "bg-chart-4/10"
                       }`}>
-                        <MessageSquare className={`h-5 w-5 ${
-                          session.status === "completed" ? "text-chart-2" : "text-chart-4"
-                        }`} />
+                        {isVoiceInterview(session.interviewType) ? (
+                          <Mic className={`h-5 w-5 ${
+                            session.status === "completed" ? "text-chart-2" : "text-chart-4"
+                          }`} />
+                        ) : (
+                          <MessageSquare className={`h-5 w-5 ${
+                            session.status === "completed" ? "text-chart-2" : "text-chart-4"
+                          }`} />
+                        )}
                       </div>
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <h3 className="font-semibold">
-                            {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview
+                            {formatInterviewType(session.interviewType)} Interview
                           </h3>
                           <Badge variant="secondary" className="text-xs">
                             Round {session.sessionNumber}
