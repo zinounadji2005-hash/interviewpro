@@ -17,8 +17,11 @@ import {
   ArrowRight,
   Loader2,
   AlertCircle,
-  Play
+  Play,
+  Brain,
+  ListChecks
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { INTERVIEW_TYPES, type CV, type InterviewSession } from "@shared/schema";
 
 const interviewIcons = {
@@ -43,9 +46,12 @@ export default function Interview() {
   const hasCv = cvs && cvs.length > 0;
   const inProgressSession = sessions?.find(s => s.status === "in_progress");
 
+  const [interviewMode, setInterviewMode] = useState<"standard" | "adaptive">("adaptive");
+
   const startMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest("POST", "/api/interviews", { 
+      const endpoint = interviewMode === "adaptive" ? "/api/interviews/adaptive" : "/api/interviews";
+      return apiRequest("POST", endpoint, { 
         interviewType: selectedType,
         cvId: cvs?.[0]?.id 
       });
@@ -53,7 +59,10 @@ export default function Interview() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/interviews"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      setLocation(`/dashboard/interview/${data.id}`);
+      const route = interviewMode === "adaptive" 
+        ? `/dashboard/adaptive-interview/${data.id}` 
+        : `/dashboard/interview/${data.id}`;
+      setLocation(route);
     },
     onError: (error: any) => {
       if (error?.message?.includes("Insufficient credits")) {
