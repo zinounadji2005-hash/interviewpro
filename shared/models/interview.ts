@@ -23,9 +23,33 @@ export const interviewSessions = pgTable("interview_sessions", {
   sessionNumber: integer("session_number").notNull().default(1),
   interviewType: text("interview_type").notNull().default("behavioral"),
   status: text("status").notNull().default("pending"),
+  interviewMemory: jsonb("interview_memory"),
+  currentDifficulty: integer("current_difficulty").default(1),
+  competencyAreasCovered: integer("competency_areas_covered").default(0),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   completedAt: timestamp("completed_at"),
 });
+
+export interface InterviewMemory {
+  topicsCovered: string[];
+  skillsDiscussed: string[];
+  questionIntents: ("experience" | "problem_solving" | "decision_making" | "communication" | "technical")[];
+  difficultyLevel: number;
+  conversationHistory: Array<{
+    question: string;
+    answer: string;
+    analysis: AnswerAnalysis;
+  }>;
+}
+
+export interface AnswerAnalysis {
+  mainTopic: string;
+  skillsMentioned: string[];
+  detailLevel: "surface" | "moderate" | "specific";
+  hasConcreteExamples: boolean;
+  reasoningDepth: "shallow" | "moderate" | "deep";
+  strategy: "clarify" | "deepen" | "challenge" | "move_forward";
+}
 
 export const interviewQuestions = pgTable("interview_questions", {
   id: serial("id").primaryKey(),

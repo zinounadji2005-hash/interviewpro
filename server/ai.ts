@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { InterviewMemory, AnswerAnalysis } from "@shared/models/interview";
 
 const openai = new OpenAI({
   apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
@@ -6,6 +7,190 @@ const openai = new OpenAI({
 });
 
 const AI_MODEL = "gpt-4o";
+
+export function createInitialMemory(): InterviewMemory {
+  return {
+    topicsCovered: [],
+    skillsDiscussed: [],
+    questionIntents: [],
+    difficultyLevel: 1,
+    conversationHistory: [],
+  };
+}
+
+export async function analyzeAnswer(
+  question: string,
+  answer: string,
+  memory: InterviewMemory
+): Promise<AnswerAnalysis> {
+  const systemPrompt = `You are an expert interview analyst. Analyze the candidate's answer to determine the next interview strategy.
+
+Evaluate:
+1. Main topic discussed
+2. Skills or technologies mentioned
+3. Level of detail: surface (vague), moderate (some specifics), specific (concrete details)
+4. Whether concrete examples were provided
+5. Reasoning depth: shallow (no reasoning), moderate (some reasoning), deep (clear decision-making process)
+
+Based on this analysis, recommend a strategy:
+- "clarify": If the answer is vague or unclear
+- "deepen": If the answer is relevant but lacks depth
+- "challenge": If the answer is strong and specific, push further
+- "move_forward": If the topic has been sufficiently explored
+
+Return a JSON object with:
+- mainTopic: string
+- skillsMentioned: string[]
+- detailLevel: "surface" | "moderate" | "specific"
+- hasConcreteExamples: boolean
+- reasoningDepth: "shallow" | "moderate" | "deep"
+- strategy: "clarify" | "deepen" | "challenge" | "move_forward"`;
+
+  const context = memory.conversationHistory.length > 0 
+    ? `Previous topics covered: ${memory.topicsCovered.join(", ")}\nSkills already discussed: ${memory.skillsDiscussed.join(", ")}`
+    : "This is the first question.";
+
+  const response = await openai.chat.completions.create({
+    model: AI_MODEL,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: `${context}\n\nQuestion: ${question}\nAnswer: ${answer}` }
+    ],
+    response_format: { type: "json_object" },
+    max_tokens: 512,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return {
+      mainTopic: "general",
+      skillsMentioned: [],
+      detailLevel: "surface",
+      hasConcreteExamples: false,
+      reasoningDepth: "shallow",
+      strategy: "clarify",
+    };
+  }
+  return JSON.parse(content);
+}
+
+export async function generateAdaptiveQuestion(
+  cvText: string,
+  interviewType: string,
+  memory: InterviewMemory,
+  lastAnalysis: AnswerAnalysis | null,
+  targetRole?: string
+): Promise<{ questionText: string; modelAnswer: string; answerExplanation: string; intent: string }> {
+  const typeDescriptions: Record<string, string> = {
+    behavioral: "behavioral questions focusing on past experiences, soft skills, teamwork, leadership, and problem-solving",
+    technical: "technical questions relevant to the role, testing knowledge and practical abilities",
+    hr: "HR/screening questions about career goals, company fit, and general background",
+  };
+
+  const strategyInstructions: Record<string, string> = {
+    clarify: "The previous answer was vague. Ask a follow-up that requests a specific example or clarification.",
+    deepen: "The previous answer was relevant but lacked depth. Ask a probing follow-up to explore further.",
+    challenge: "The previous answer was strong. Challenge the candidate with a harder question on a related topic.",
+    move_forward: "The previous topic was sufficiently explored. Move to a new competency area.",
+  };
+
+  const conversationContext = memory.conversationHistory
+    .slice(-3)
+    .map((h, i) => `Q${i + 1}: ${h.question}\nA${i + 1}: ${h.answer}`)
+    .join("\n\n");
+
+  const systemPrompt = `You are an intelligent AI interviewer conducting a realistic ${typeDescriptions[interviewType] || "job"} interview.
+${targetRole ? `Target role: ${targetRole}` : ""}
+
+Core Principles:
+- Never ask repetitive or redundant questions
+- Every question must logically follow from the previous answer
+- Questions should progressively increase in depth
+- The interview must feel natural and attentive
+- Ask ONE focused question only
+
+Topics already covered: ${memory.topicsCovered.join(", ") || "none yet"}
+Skills already discussed: ${memory.skillsDiscussed.join(", ") || "none yet"}
+Current difficulty level: ${memory.difficultyLevel}/5
+Question intents used: ${memory.questionIntents.join(", ") || "none yet"}
+
+${lastAnalysis ? `Strategy for next question: ${strategyInstructions[lastAnalysis.strategy]}` : "This is the opening question. Start with a general experience question."}
+
+Return a JSON object with:
+- questionText: string (the interview question)
+- modelAnswer: string (an excellent answer example)
+- answerExplanation: string (why this answer works)
+- intent: string (one of: "experience", "problem_solving", "decision_making", "communication", "technical")`;
+
+  const userContent = conversationContext 
+    ? `CV Summary:\n${cvText.slice(0, 1500)}\n\nRecent conversation:\n${conversationContext}\n\nGenerate the next question.`
+    : `CV Summary:\n${cvText.slice(0, 1500)}\n\nGenerate the opening interview question.`;
+
+  const response = await openai.chat.completions.create({
+    model: AI_MODEL,
+    messages: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userContent }
+    ],
+    response_format: { type: "json_object" },
+    max_tokens: 1024,
+  });
+
+  const content = response.choices[0]?.message?.content;
+  if (!content) {
+    return {
+      questionText: "Tell me about yourself and your background.",
+      modelAnswer: "A concise summary highlighting relevant experience and skills.",
+      answerExplanation: "Opens the conversation naturally.",
+      intent: "experience",
+    };
+  }
+  return JSON.parse(content);
+}
+
+export function updateMemory(
+  memory: InterviewMemory,
+  question: string,
+  answer: string,
+  analysis: AnswerAnalysis,
+  intent: string
+): InterviewMemory {
+  const allTopics = [...memory.topicsCovered, analysis.mainTopic];
+  const uniqueTopics = allTopics.filter((topic, idx) => allTopics.indexOf(topic) === idx);
+  
+  const allSkills = [...memory.skillsDiscussed, ...analysis.skillsMentioned];
+  const uniqueSkills = allSkills.filter((skill, idx) => allSkills.indexOf(skill) === idx);
+
+  const updatedMemory: InterviewMemory = {
+    topicsCovered: uniqueTopics,
+    skillsDiscussed: uniqueSkills,
+    questionIntents: [...memory.questionIntents, intent as any],
+    difficultyLevel: analysis.strategy === "challenge" 
+      ? Math.min(memory.difficultyLevel + 1, 5)
+      : memory.difficultyLevel,
+    conversationHistory: [
+      ...memory.conversationHistory,
+      { question, answer, analysis }
+    ],
+  };
+  return updatedMemory;
+}
+
+export function shouldEndInterview(memory: InterviewMemory): { shouldEnd: boolean; reason: string } {
+  const uniqueTopics = new Set(memory.topicsCovered);
+  const questionCount = memory.conversationHistory.length;
+  
+  if (uniqueTopics.size >= 5) {
+    return { shouldEnd: true, reason: "5 competency areas have been explored" };
+  }
+  if (questionCount >= 8) {
+    return { shouldEnd: true, reason: "Maximum question limit reached" };
+  }
+  if (memory.difficultyLevel >= 4 && uniqueTopics.size >= 3) {
+    return { shouldEnd: true, reason: "Sufficient depth reached across multiple areas" };
+  }
+  return { shouldEnd: false, reason: "" };
+}
 
 export async function optimizeCV(originalText: string, targetRole?: string, jobDescription?: string): Promise<{
   improvedText: string;

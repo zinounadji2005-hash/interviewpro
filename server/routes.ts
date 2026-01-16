@@ -2,7 +2,19 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import multer from "multer";
 import { storage } from "./storage";
-import { optimizeCV, generateInterviewQuestions, evaluateAnswer, generateSessionEvaluation, detectWeaknessPatterns } from "./ai";
+import { 
+  optimizeCV, 
+  generateInterviewQuestions, 
+  evaluateAnswer, 
+  generateSessionEvaluation, 
+  detectWeaknessPatterns,
+  createInitialMemory,
+  analyzeAnswer,
+  generateAdaptiveQuestion,
+  updateMemory,
+  shouldEndInterview
+} from "./ai";
+import type { InterviewMemory, AnswerAnalysis } from "@shared/models/interview";
 import { setupSupabaseAuth, isAuthenticated } from "./supabase-auth";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
@@ -230,6 +242,176 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Create interview error:", error);
       res.status(500).json({ error: "Failed to create interview" });
+    }
+  });
+
+  app.post("/api/interviews/adaptive", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const creditCost = 20;
+      const hasCredits = await storage.deductCredits(userId, creditCost);
+      if (!hasCredits) {
+        return res.status(402).json({ error: "Insufficient credits", required: creditCost });
+      }
+
+      const { interviewType, cvId } = req.body;
+      const initialMemory = createInitialMemory();
+      
+      const session = await storage.createInterviewSession({
+        userId,
+        cvId: cvId || null,
+        interviewType: interviewType || "behavioral",
+        status: "in_progress",
+        interviewMemory: initialMemory,
+        currentDifficulty: 1,
+        competencyAreasCovered: 0,
+      });
+
+      let cvText = "";
+      let targetRole: string | undefined;
+      if (cvId) {
+        const cv = await storage.getCv(cvId);
+        if (cv) {
+          cvText = cv.improvedText || cv.originalText;
+          targetRole = cv.targetRole || undefined;
+        }
+      }
+
+      const firstQuestion = await generateAdaptiveQuestion(
+        cvText || "No CV provided",
+        interviewType || "behavioral",
+        initialMemory,
+        null,
+        targetRole
+      );
+
+      const question = await storage.createInterviewQuestion({
+        sessionId: session.id,
+        questionNumber: 1,
+        questionText: firstQuestion.questionText,
+        modelAnswer: firstQuestion.modelAnswer,
+        answerExplanation: firstQuestion.answerExplanation,
+      });
+
+      res.status(201).json({ 
+        ...session, 
+        currentQuestion: question,
+        isAdaptive: true,
+        canEnd: false,
+        endReason: null,
+      });
+    } catch (error) {
+      console.error("Create adaptive interview error:", error);
+      res.status(500).json({ error: "Failed to create interview" });
+    }
+  });
+
+  app.post("/api/interviews/:id/adaptive-answer", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const sessionId = parseInt(req.params.id);
+      const session = await storage.getInterviewSession(sessionId);
+      if (!session || session.userId !== userId) {
+        return res.status(404).json({ error: "Interview not found" });
+      }
+
+      const { questionId, answer } = req.body;
+      if (!questionId || typeof answer !== "string") {
+        return res.status(400).json({ error: "Invalid request body" });
+      }
+
+      const questions = await storage.getQuestionsBySessionId(sessionId);
+      const question = questions.find(q => q.id === questionId);
+      
+      if (!question) {
+        return res.status(404).json({ error: "Question not found" });
+      }
+
+      await storage.updateInterviewQuestion(questionId, { userAnswer: answer });
+
+      const memory = (session.interviewMemory as InterviewMemory) || createInitialMemory();
+      
+      const answerAnalysis = await analyzeAnswer(question.questionText, answer, memory);
+      
+      const questionIntent = questions.length === 1 ? "experience" : 
+        answerAnalysis.strategy === "challenge" ? "problem_solving" : 
+        answerAnalysis.strategy === "deepen" ? "decision_making" : "experience";
+      
+      const updatedMemory = updateMemory(
+        memory,
+        question.questionText,
+        answer,
+        answerAnalysis,
+        questionIntent
+      );
+
+      const endCheck = shouldEndInterview(updatedMemory);
+      
+      await storage.updateInterviewSession(sessionId, {
+        interviewMemory: updatedMemory,
+        currentDifficulty: updatedMemory.difficultyLevel,
+        competencyAreasCovered: updatedMemory.topicsCovered.length,
+      });
+
+      if (endCheck.shouldEnd) {
+        return res.json({
+          success: true,
+          nextQuestion: null,
+          shouldEnd: true,
+          endReason: endCheck.reason,
+          memory: {
+            topicsCovered: updatedMemory.topicsCovered,
+            skillsDiscussed: updatedMemory.skillsDiscussed,
+            difficultyLevel: updatedMemory.difficultyLevel,
+          },
+        });
+      }
+
+      let cvText = "";
+      let targetRole: string | undefined;
+      if (session.cvId) {
+        const cv = await storage.getCv(session.cvId);
+        if (cv) {
+          cvText = cv.improvedText || cv.originalText;
+          targetRole = cv.targetRole || undefined;
+        }
+      }
+
+      const nextQuestionData = await generateAdaptiveQuestion(
+        cvText || "No CV provided",
+        session.interviewType,
+        updatedMemory,
+        answerAnalysis,
+        targetRole
+      );
+
+      const nextQuestion = await storage.createInterviewQuestion({
+        sessionId: session.id,
+        questionNumber: questions.length + 1,
+        questionText: nextQuestionData.questionText,
+        modelAnswer: nextQuestionData.modelAnswer,
+        answerExplanation: nextQuestionData.answerExplanation,
+      });
+
+      res.json({
+        success: true,
+        nextQuestion,
+        shouldEnd: false,
+        endReason: null,
+        strategy: answerAnalysis.strategy,
+        memory: {
+          topicsCovered: updatedMemory.topicsCovered,
+          skillsDiscussed: updatedMemory.skillsDiscussed,
+          difficultyLevel: updatedMemory.difficultyLevel,
+        },
+      });
+    } catch (error) {
+      console.error("Adaptive answer error:", error);
+      res.status(500).json({ error: "Failed to process answer" });
     }
   });
 
