@@ -45,11 +45,21 @@ Preferred communication style: Simple, everyday language.
 - **Features**: CV text optimization, interview question generation, answer evaluation, session scoring, weakness pattern detection
 - **Audio Support**: Voice chat capabilities with text-to-speech and speech-to-text
 
+### Voice Interview Feature
+- **Route**: /dashboard/voice-interview
+- **Flow**: Setup (CV/type selection) → Interview (recording/AI questions) → Complete (scores/transcript)
+- **Phases**: 4 phases with 8 total questions (warmup, core, deepdive, closing)
+- **Audio**: MediaRecorder API for recording, Web Audio API for waveform visualization
+- **AI Integration**: OpenAI Whisper for transcription, TTS for speech synthesis
+- **Scoring**: Real-time tracking of communication, confidence, relevance, structure (0-100)
+- **Adaptive Questioning**: AI adjusts questions based on candidate's previous answers
+
 ### Credit System
 - **Default Balance**: New users start with 100 credits
 - **Credit Costs**:
   - CV optimization: 10 credits
   - Start new interview: 20 credits
+  - Voice interview session: 20 credits
   - Interview evaluation: 15 credits
 - **Storage**: credits field in users table (integer, default 100)
 - **API Endpoints**: /api/credits (GET), credits included in /api/dashboard response
