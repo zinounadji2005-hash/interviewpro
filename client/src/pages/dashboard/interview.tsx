@@ -51,10 +51,11 @@ export default function Interview() {
   const startMutation = useMutation({
     mutationFn: async () => {
       const endpoint = interviewMode === "adaptive" ? "/api/interviews/adaptive" : "/api/interviews";
-      return apiRequest("POST", endpoint, { 
+      const response = await apiRequest("POST", endpoint, { 
         interviewType: selectedType,
         cvId: cvs?.[0]?.id 
       });
+      return response.json();
     },
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ["/api/interviews"] });
