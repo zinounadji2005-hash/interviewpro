@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,6 +11,16 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
@@ -21,9 +31,23 @@ import {
   CheckCircle2,
   ArrowRight,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle,
+  UserCheck,
+  XCircle
 } from "lucide-react";
 import { JOB_ROLES, type CV } from "@shared/schema";
+
+interface NameValidation {
+  extractedName: string;
+  matchScore: number;
+  status: "verified" | "needs_confirmation" | "mismatch";
+  message: string;
+}
+
+interface CVWithValidation extends CV {
+  nameValidation?: NameValidation;
+}
 
 export default function CVManager() {
   const { toast } = useToast();
@@ -31,6 +55,9 @@ export default function CVManager() {
   const [targetRole, setTargetRole] = useState<string>("");
   const [jobDescription, setJobDescription] = useState<string>("");
   const [dragActive, setDragActive] = useState(false);
+  const [pendingCv, setPendingCv] = useState<CVWithValidation | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [showMismatchAlert, setShowMismatchAlert] = useState(false);
 
   const { data: cvs, isLoading } = useQuery<CV[]>({
     queryKey: ["/api/cvs"],
@@ -46,16 +73,49 @@ export default function CVManager() {
         credentials: "include",
       });
       if (!response.ok) throw new Error("Failed to upload CV");
+      return response.json() as Promise<CVWithValidation>;
+    },
+    onSuccess: (data) => {
+      const validation = data.nameValidation;
+      
+      if (!validation || validation.status === "verified") {
+        queryClient.invalidateQueries({ queryKey: ["/api/cvs"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+        toast({ 
+          title: "CV uploaded successfully!", 
+          description: validation?.extractedName 
+            ? `Welcome, ${validation.extractedName}! Your CV is ready for optimization.`
+            : "Your CV is ready for optimization." 
+        });
+        setFile(null);
+      } else if (validation.status === "needs_confirmation") {
+        setPendingCv(data);
+        setShowConfirmDialog(true);
+      } else if (validation.status === "mismatch") {
+        setPendingCv(data);
+        setShowMismatchAlert(true);
+      }
+    },
+    onError: () => {
+      toast({ title: "Upload failed", description: "Please try again.", variant: "destructive" });
+    },
+  });
+
+  const confirmCvMutation = useMutation({
+    mutationFn: async (cvId: number) => {
+      const response = await apiRequest("POST", `/api/cvs/${cvId}/confirm`);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/cvs"] });
       queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
-      toast({ title: "CV uploaded successfully!", description: "Your CV is ready for optimization." });
+      toast({ title: "CV confirmed!", description: "Your CV is ready for optimization." });
       setFile(null);
+      setPendingCv(null);
+      setShowConfirmDialog(false);
     },
     onError: () => {
-      toast({ title: "Upload failed", description: "Please try again.", variant: "destructive" });
+      toast({ title: "Confirmation failed", description: "Please try again.", variant: "destructive" });
     },
   });
 
@@ -343,6 +403,108 @@ export default function CVManager() {
           </>
         )}
       </div>
+
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-xl bg-chart-4/10">
+                <AlertTriangle className="h-5 w-5 text-chart-4" />
+              </div>
+              <AlertDialogTitle>Confirm CV Ownership</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-3">
+              <p>{pendingCv?.nameValidation?.message}</p>
+              <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Name on CV:</span>{" "}
+                  <span className="font-medium text-foreground">{pendingCv?.nameValidation?.extractedName}</span>
+                </p>
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Match confidence:</span>{" "}
+                  <span className="font-medium text-foreground">{pendingCv?.nameValidation?.matchScore}%</span>
+                </p>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setPendingCv(null);
+                setFile(null);
+              }}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => pendingCv && confirmCvMutation.mutate(pendingCv.id)}
+              disabled={confirmCvMutation.isPending}
+              data-testid="button-confirm-cv"
+            >
+              {confirmCvMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <UserCheck className="h-4 w-4 mr-2" />
+              )}
+              Yes, this is my CV
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showMismatchAlert} onOpenChange={setShowMismatchAlert}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-2 rounded-xl bg-destructive/10">
+                <XCircle className="h-5 w-5 text-destructive" />
+              </div>
+              <AlertDialogTitle>Name Mismatch Detected</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="space-y-3">
+              <p>{pendingCv?.nameValidation?.message}</p>
+              <div className="p-3 rounded-lg bg-muted/50 space-y-1">
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Name on CV:</span>{" "}
+                  <span className="font-medium text-foreground">{pendingCv?.nameValidation?.extractedName || "Not detected"}</span>
+                </p>
+                <p className="text-sm">
+                  <span className="text-muted-foreground">Match confidence:</span>{" "}
+                  <span className="font-medium text-destructive">{pendingCv?.nameValidation?.matchScore}%</span>
+                </p>
+              </div>
+              <p className="text-sm">
+                Please ensure you are uploading your own CV, or update your account name if needed.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
+            <AlertDialogCancel 
+              onClick={() => {
+                setPendingCv(null);
+                setFile(null);
+                setShowMismatchAlert(false);
+              }}
+              className="w-full sm:w-auto"
+            >
+              Upload Different CV
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => pendingCv && confirmCvMutation.mutate(pendingCv.id)}
+              disabled={confirmCvMutation.isPending}
+              className="w-full sm:w-auto"
+              data-testid="button-force-confirm-cv"
+            >
+              {confirmCvMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <UserCheck className="h-4 w-4 mr-2" />
+              )}
+              Confirm Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

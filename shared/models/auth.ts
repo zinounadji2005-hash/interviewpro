@@ -20,6 +20,7 @@ export const users = pgTable("users", {
   email: varchar("email").unique(),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
+  fullNameNormalized: varchar("full_name_normalized"),
   profileImageUrl: varchar("profile_image_url"),
   credits: integer("credits").default(100).notNull(),
   createdAt: timestamp("created_at").defaultNow(),
