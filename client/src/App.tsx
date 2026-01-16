@@ -16,6 +16,7 @@ import InterviewSession from "@/pages/dashboard/interview-session";
 import Evaluation from "@/pages/dashboard/evaluation";
 import Progress from "@/pages/dashboard/progress";
 import History from "@/pages/dashboard/history";
+import VoiceInterview from "@/pages/dashboard/voice-interview";
 import Logout from "@/pages/logout";
 import NotFound from "@/pages/not-found";
 
@@ -29,6 +30,7 @@ function AuthenticatedRoutes() {
       <Route path="/dashboard/evaluation/:id" component={Evaluation} />
       <Route path="/dashboard/progress" component={Progress} />
       <Route path="/dashboard/history" component={History} />
+      <Route path="/dashboard/voice-interview" component={VoiceInterview} />
       <Route component={NotFound} />
     </Switch>
   );

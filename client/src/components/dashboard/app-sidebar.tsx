@@ -5,7 +5,8 @@ import {
   MessageSquare, 
   TrendingUp, 
   History, 
-  LogOut
+  LogOut,
+  Volume2
 } from "lucide-react";
 import {
   Sidebar,
@@ -27,6 +28,7 @@ const menuItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "CV Manager", url: "/dashboard/cv", icon: FileText },
   { title: "Mock Interview", url: "/dashboard/interview", icon: MessageSquare },
+  { title: "Voice Interview", url: "/dashboard/voice-interview", icon: Volume2 },
   { title: "Progress", url: "/dashboard/progress", icon: TrendingUp },
   { title: "History", url: "/dashboard/history", icon: History },
 ];
