@@ -184,24 +184,6 @@ export function HeroSection() {
                 </a>
               </Button>
             </motion.div>
-            
-            <motion.div 
-              className="flex flex-wrap gap-8 pt-4"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.1 }}
-            >
-              {[
-                { value: "10,000+", label: "Interviews Completed", id: "interviews" },
-                { value: "87%", label: "Success Rate", id: "success" },
-                { value: "4.9/5", label: "User Rating", id: "rating" },
-              ].map((stat) => (
-                <div key={stat.label} className="text-center" data-testid={`stat-${stat.id}`}>
-                  <div className="text-2xl font-bold text-white" data-testid={`stat-value-${stat.id}`}>{stat.value}</div>
-                  <div className="text-xs text-slate-500">{stat.label}</div>
-                </div>
-              ))}
-            </motion.div>
           </motion.div>
           
           <motion.div 
