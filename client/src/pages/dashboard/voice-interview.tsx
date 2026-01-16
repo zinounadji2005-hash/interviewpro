@@ -255,7 +255,21 @@ export default function VoiceInterview() {
       source.connect(analyserRef.current);
       analyserRef.current.fftSize = 256;
       
-      const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+      // Detect supported mimeType
+      let mimeType = "audio/webm";
+      if (!MediaRecorder.isTypeSupported("audio/webm")) {
+        if (MediaRecorder.isTypeSupported("audio/mp4")) {
+          mimeType = "audio/mp4";
+        } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+          mimeType = "audio/ogg";
+        } else {
+          mimeType = "";
+        }
+      }
+      
+      const mediaRecorder = mimeType 
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
       
@@ -266,7 +280,7 @@ export default function VoiceInterview() {
       };
       
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+        const audioBlob = new Blob(audioChunksRef.current, { type: mediaRecorder.mimeType || "audio/webm" });
         const reader = new FileReader();
         reader.onloadend = () => {
           const base64 = (reader.result as string).split(",")[1];
@@ -281,8 +295,9 @@ export default function VoiceInterview() {
       mediaRecorder.start();
       setIsRecording(true);
       
+      let isActiveRecording = true;
       const updateLevel = () => {
-        if (analyserRef.current && isRecording) {
+        if (analyserRef.current && isActiveRecording && mediaRecorderRef.current?.state === "recording") {
           const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
           analyserRef.current.getByteFrequencyData(dataArray);
           const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
@@ -593,8 +608,19 @@ export default function VoiceInterview() {
                 <Button
                   size="lg"
                   variant={isRecording ? "destructive" : "default"}
-                  onClick={isRecording ? stopRecording : startRecording}
-                  disabled={isPlaying}
+                  onClick={() => {
+                    if (isRecording) {
+                      stopRecording();
+                    } else {
+                      // Stop any playing audio first
+                      if (audioElementRef.current) {
+                        audioElementRef.current.pause();
+                        audioElementRef.current = null;
+                      }
+                      setIsPlaying(false);
+                      startRecording();
+                    }
+                  }}
                   className="h-16 w-16 rounded-full"
                   data-testid="button-record"
                 >
