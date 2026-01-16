@@ -474,33 +474,20 @@ export default function CVManager() {
                 </p>
               </div>
               <p className="text-sm">
-                Please ensure you are uploading your own CV, or update your account name if needed.
+                To proceed, please upload a CV that matches your account name, or update your account profile with the correct name.
               </p>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col gap-2 sm:flex-row">
-            <AlertDialogCancel 
+          <AlertDialogFooter>
+            <AlertDialogAction 
               onClick={() => {
                 setPendingCv(null);
                 setFile(null);
                 setShowMismatchAlert(false);
               }}
-              className="w-full sm:w-auto"
+              data-testid="button-upload-different-cv"
             >
               Upload Different CV
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => pendingCv && confirmCvMutation.mutate(pendingCv.id)}
-              disabled={confirmCvMutation.isPending}
-              className="w-full sm:w-auto"
-              data-testid="button-force-confirm-cv"
-            >
-              {confirmCvMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <UserCheck className="h-4 w-4 mr-2" />
-              )}
-              Confirm Anyway
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
