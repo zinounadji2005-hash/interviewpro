@@ -10,7 +10,12 @@ export default function LogoutPage() {
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
-    window.location.href = "/api/logout";
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } catch (e) {
+      // Continue even if request fails
+    }
+    window.location.href = "/";
   };
 
   return (
