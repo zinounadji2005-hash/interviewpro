@@ -165,6 +165,29 @@ export async function setupSupabaseAuth(app: Express) {
     });
   });
 
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+
+      const { error } = await getSupabase().auth.resetPasswordForEmail(email, {
+        redirectTo: `${req.protocol}://${req.get('host')}/reset-password`,
+      });
+
+      if (error) {
+        return res.status(400).json({ error: error.message });
+      }
+
+      res.json({ success: true, message: "Password reset email sent" });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ error: "Failed to send reset email" });
+    }
+  });
+
   app.get("/api/auth/user", async (req, res) => {
     try {
       const userId = (req.session as any)?.userId;
