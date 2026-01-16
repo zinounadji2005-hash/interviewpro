@@ -1,0 +1,206 @@
+High-Impact Animated Landing Page Design Prompt
+
+You are a senior UI/UX designer and frontend engineer specialized in modern SaaS landing pages.
+Your task is to design and implement a highly polished, visually engaging landing page for an AI-powered job interview preparation platform.
+
+This landing page must create a strong first impression, feel premium, and clearly communicate value within the first 5 seconds.
+
+Design Goals
+
+Instantly communicate professionalism, intelligence, and trust.
+
+Use motion and animation to guide attention, not distract.
+
+Make the product feel modern, AI-driven, and high-value.
+
+Encourage users to sign up immediately.
+
+Visual Style & Branding
+Overall Style
+
+Modern SaaS aesthetic
+
+Clean but dynamic
+
+Confident, professional, slightly futuristic
+
+Color Palette
+
+Primary gradient:
+
+Deep blue → electric purple OR blue → teal
+
+Accent colors:
+
+Soft neon highlights for CTAs
+
+Subtle glow effects on key elements
+
+Background:
+
+Dark or semi-dark gradient background preferred
+
+Light noise or subtle grid for depth
+
+Avoid flat, boring colors.
+
+Typography
+Headline Font
+
+Bold, modern sans-serif
+
+Large, confident typography
+
+Strong hierarchy
+
+Body Text
+
+Clean and readable
+
+Slightly smaller, high contrast
+
+Animated Text (Critical)
+Hero Headline Animation
+
+Use animated text that:
+
+Types in or fades in word-by-word
+
+Highlights key phrases dynamically
+
+Example behavior (not exact copy):
+
+“Ace your next interview”
+
+Then animate:
+
+“with AI-powered practice”
+
+“with real feedback”
+
+“with measurable improvement”
+
+The animation must loop smoothly and feel premium.
+
+Layout Structure
+1. Hero Section (Above the Fold)
+
+Must include:
+
+Animated headline (main attention grabber)
+
+Short supporting subtitle explaining the value
+
+Primary CTA button:
+
+“Start Practicing Free”
+
+Secondary CTA:
+
+“See How It Works”
+
+Add:
+
+Subtle animated background elements (floating shapes, gradient waves, or light motion)
+
+2. Step-by-Step Process Section
+
+Visually show:
+
+Upload CV
+
+Target Role
+
+Improve CV
+
+Mock Interview
+
+Feedback
+
+Progress
+
+Use:
+
+Animated cards
+
+Smooth hover effects
+
+Slight entrance animations as user scrolls
+
+3. Value Differentiation Section
+
+Explain why this is better than generic AI tools:
+
+Structured interviews
+
+Real scoring
+
+Progress tracking
+
+Adaptive questions
+
+Use:
+
+Icons
+
+Motion on scroll
+
+Emphasized keywords with color accents
+
+4. Social Proof / Trust Section
+
+Even if placeholders:
+
+“Built for real job seekers”
+
+“Designed to simulate real interviews”
+
+Use clean cards with subtle animations
+
+5. Final Call to Action
+
+Strong closing headline
+
+Animated emphasis on “Ready for your next interview?”
+
+Large CTA button
+
+Motion & Interaction Guidelines
+
+Use smooth animations (ease-in-out, no harsh motion).
+
+Prefer:
+
+Fade-in
+
+Slide-up
+
+Scale slightly on hover
+
+Avoid:
+
+Overly fast animations
+
+Flashy effects
+
+Animations must feel intentional and premium, not playful.
+
+Technical Guidelines
+
+Responsive (desktop-first, mobile-friendly).
+
+Use modern frontend practices:
+
+CSS animations / Framer Motion / GSAP (choose what fits best).
+
+Ensure performance:
+
+Animations must not hurt loading speed.
+
+Final Instruction
+
+Design this landing page as if it were for a funded startup competing in the SaaS market.
+It must feel trustworthy, intelligent, and visually impressive.
+
+The user should immediately think:
+“This feels professional — I want to try it.”
