@@ -15,7 +15,7 @@ import {
   shouldEndInterview
 } from "./ai";
 import type { InterviewMemory, AnswerAnalysis } from "@shared/models/interview";
-import { setupSupabaseAuth, isAuthenticated } from "./supabase-auth";
+import { setupSupabaseAuth, isAuthenticated, syncUsersFromSupabase } from "./supabase-auth";
 import {
   createInitialVoiceState,
   generateNextQuestion,
@@ -47,6 +47,26 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get user count error:", error);
       res.status(500).json({ error: "Failed to get user count" });
+    }
+  });
+
+  // Admin endpoint to sync users from Supabase Auth to local database
+  // Requires SUPABASE_SERVICE_ROLE_KEY environment variable
+  app.post("/api/admin/sync-users", async (req: Request, res: Response) => {
+    try {
+      const result = await syncUsersFromSupabase();
+      res.json({ 
+        success: true, 
+        message: `Synced ${result.synced} users from Supabase`,
+        synced: result.synced,
+        errors: result.errors
+      });
+    } catch (error: any) {
+      console.error("User sync error:", error);
+      res.status(500).json({ 
+        success: false,
+        error: error.message || "Failed to sync users" 
+      });
     }
   });
 
