@@ -1,4 +1,4 @@
-import { Upload, Target, FileCheck, MessageSquare, TrendingUp, Award } from "lucide-react";
+import { Upload, Target, FileCheck, MessageSquare, TrendingUp, Award, ChevronRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { useInView } from "framer-motion";
 import { useRef } from "react";
@@ -78,15 +78,14 @@ function StepCard({ step, index }: { step: typeof steps[0]; index: number }) {
       </div>
       
       {index < steps.length - 1 && (
-        <div className="hidden lg:block absolute top-10 left-full w-full">
-          <motion.div 
-            className="h-[2px] bg-gradient-to-r from-slate-700 to-slate-800 w-[calc(100%-40px)] mx-auto"
-            initial={{ scaleX: 0 }}
-            animate={isInView ? { scaleX: 1 } : { scaleX: 0 }}
-            transition={{ duration: 0.8, delay: index * 0.1 + 0.3 }}
-            style={{ originX: 0 }}
-          />
-        </div>
+        <motion.div 
+          className="hidden lg:flex absolute top-8 -right-6 items-center justify-center z-10"
+          initial={{ opacity: 0, x: -10 }}
+          animate={isInView ? { opacity: 1, x: 0 } : { opacity: 0, x: -10 }}
+          transition={{ duration: 0.5, delay: index * 0.1 + 0.3 }}
+        >
+          <ChevronRight className="w-6 h-6 text-slate-500" />
+        </motion.div>
       )}
     </motion.div>
   );
