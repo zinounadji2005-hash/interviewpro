@@ -26,6 +26,7 @@ import {
   calculateFinalScores,
   type VoiceInterviewState,
 } from "./voice-interview";
+import { validateCVName, normalizeName } from "./nameValidation";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -140,14 +141,32 @@ export async function registerRoutes(
         textContent = file.buffer.toString("utf-8");
       }
 
+      const user = await storage.getUser(userId);
+      const nameValidation = await validateCVName(
+        textContent,
+        user?.firstName || null,
+        user?.lastName || null
+      );
+
       const cv = await storage.createCv({
         userId,
         originalText: textContent,
         targetRole: req.body.targetRole || null,
         jobDescription: req.body.jobDescription || null,
+        cvNameExtracted: nameValidation.cvNameExtracted || null,
+        nameMatchScore: nameValidation.matchScore,
+        nameValidationStatus: nameValidation.status,
       });
 
-      res.status(201).json(cv);
+      res.status(201).json({
+        ...cv,
+        nameValidation: {
+          extractedName: nameValidation.cvNameExtracted,
+          matchScore: nameValidation.matchScore,
+          status: nameValidation.status,
+          message: nameValidation.message,
+        },
+      });
     } catch (error) {
       console.error("CV upload error:", error);
       res.status(500).json({ error: "Failed to upload CV" });
@@ -185,6 +204,28 @@ export async function registerRoutes(
     } catch (error) {
       console.error("CV optimize error:", error);
       res.status(500).json({ error: "Failed to optimize CV" });
+    }
+  });
+
+  app.post("/api/cvs/:id/confirm", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const cvId = parseInt(req.params.id);
+      const cv = await storage.getCv(cvId);
+      if (!cv || cv.userId !== userId) {
+        return res.status(404).json({ error: "CV not found" });
+      }
+
+      const updatedCv = await storage.updateCv(cvId, {
+        nameValidationStatus: "verified",
+      });
+
+      res.json({ success: true, cv: updatedCv });
+    } catch (error) {
+      console.error("CV confirm error:", error);
+      res.status(500).json({ error: "Failed to confirm CV ownership" });
     }
   });
 

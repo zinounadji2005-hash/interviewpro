@@ -12,6 +12,9 @@ export const cvs = pgTable("cvs", {
   targetRole: text("target_role"),
   jobDescription: text("job_description"),
   analysis: jsonb("analysis"),
+  cvNameExtracted: text("cv_name_extracted"),
+  nameMatchScore: integer("name_match_score"),
+  nameValidationStatus: text("name_validation_status").default("pending"),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
   updatedAt: timestamp("updated_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
