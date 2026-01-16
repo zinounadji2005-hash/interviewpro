@@ -16,6 +16,16 @@ import {
 } from "./ai";
 import type { InterviewMemory, AnswerAnalysis } from "@shared/models/interview";
 import { setupSupabaseAuth, isAuthenticated } from "./supabase-auth";
+import {
+  createInitialVoiceState,
+  generateNextQuestion,
+  processAnswer,
+  transcribeAudio,
+  synthesizeSpeech,
+  generateClosingMessage,
+  calculateFinalScores,
+  type VoiceInterviewState,
+} from "./voice-interview";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -598,6 +608,190 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get progress error:", error);
       res.status(500).json({ error: "Failed to get progress" });
+    }
+  });
+
+  const voiceInterviewSessions = new Map<string, { state: VoiceInterviewState; cvText: string; interviewType: string; targetRole?: string }>();
+
+  app.post("/api/voice-interview/start", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { cvId, interviewType, targetRole } = req.body;
+      if (!cvId || !interviewType) {
+        return res.status(400).json({ error: "CV ID and interview type are required" });
+      }
+
+      const creditCost = 20;
+      const currentCredits = await storage.getUserCredits(userId);
+      if (currentCredits < creditCost) {
+        return res.status(402).json({ 
+          error: "Insufficient credits", 
+          required: creditCost, 
+          current: currentCredits 
+        });
+      }
+
+      const cv = await storage.getCv(cvId);
+      if (!cv || cv.userId !== userId) {
+        return res.status(404).json({ error: "CV not found" });
+      }
+
+      await storage.deductCredits(userId, creditCost);
+
+      const sessionKey = `${userId}-${Date.now()}`;
+      const state = createInitialVoiceState();
+
+      voiceInterviewSessions.set(sessionKey, {
+        state,
+        cvText: cv.originalText,
+        interviewType,
+        targetRole,
+      });
+
+      const { questionText, state: updatedState } = await generateNextQuestion(
+        state,
+        cv.originalText,
+        interviewType,
+        targetRole
+      );
+
+      voiceInterviewSessions.set(sessionKey, {
+        ...voiceInterviewSessions.get(sessionKey)!,
+        state: updatedState,
+      });
+
+      const audioBuffer = await synthesizeSpeech(questionText);
+      const audioBase64 = audioBuffer.toString("base64");
+
+      res.json({
+        sessionKey,
+        questionText,
+        questionAudio: audioBase64,
+        phase: updatedState.phase.name,
+        questionNumber: updatedState.questionNumber,
+        totalQuestions: updatedState.totalQuestions,
+        isComplete: false,
+      });
+    } catch (error) {
+      console.error("Voice interview start error:", error);
+      res.status(500).json({ error: "Failed to start voice interview" });
+    }
+  });
+
+  app.post("/api/voice-interview/answer", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { sessionKey, audio, audioFormat = "webm" } = req.body;
+      if (!sessionKey || !audio) {
+        return res.status(400).json({ error: "Session key and audio are required" });
+      }
+
+      const session = voiceInterviewSessions.get(sessionKey);
+      if (!session) {
+        return res.status(404).json({ error: "Voice interview session not found" });
+      }
+
+      const audioBuffer = Buffer.from(audio, "base64");
+      const answerText = await transcribeAudio(audioBuffer, audioFormat);
+
+      const { state: stateAfterAnswer } = await processAnswer(session.state, answerText);
+
+      if (stateAfterAnswer.isComplete) {
+        const closingMessage = generateClosingMessage();
+        const closingAudio = await synthesizeSpeech(closingMessage);
+        const scores = calculateFinalScores(stateAfterAnswer);
+
+        voiceInterviewSessions.delete(sessionKey);
+
+        return res.json({
+          answerText,
+          isComplete: true,
+          closingMessage,
+          closingAudio: closingAudio.toString("base64"),
+          scores,
+          conversationHistory: stateAfterAnswer.conversationHistory,
+        });
+      }
+
+      const { questionText, state: updatedState } = await generateNextQuestion(
+        stateAfterAnswer,
+        session.cvText,
+        session.interviewType,
+        session.targetRole
+      );
+
+      voiceInterviewSessions.set(sessionKey, {
+        ...session,
+        state: updatedState,
+      });
+
+      const questionAudio = await synthesizeSpeech(questionText);
+
+      res.json({
+        answerText,
+        questionText,
+        questionAudio: questionAudio.toString("base64"),
+        phase: updatedState.phase.name,
+        questionNumber: updatedState.questionNumber,
+        totalQuestions: updatedState.totalQuestions,
+        isComplete: false,
+      });
+    } catch (error) {
+      console.error("Voice interview answer error:", error);
+      res.status(500).json({ error: "Failed to process answer" });
+    }
+  });
+
+  app.post("/api/voice-interview/end", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { sessionKey } = req.body;
+      if (!sessionKey) {
+        return res.status(400).json({ error: "Session key is required" });
+      }
+
+      const session = voiceInterviewSessions.get(sessionKey);
+      if (!session) {
+        return res.status(404).json({ error: "Voice interview session not found" });
+      }
+
+      const scores = calculateFinalScores(session.state);
+      const closingMessage = generateClosingMessage();
+      const closingAudio = await synthesizeSpeech(closingMessage);
+
+      voiceInterviewSessions.delete(sessionKey);
+
+      res.json({
+        isComplete: true,
+        closingMessage,
+        closingAudio: closingAudio.toString("base64"),
+        scores,
+        conversationHistory: session.state.conversationHistory,
+      });
+    } catch (error) {
+      console.error("Voice interview end error:", error);
+      res.status(500).json({ error: "Failed to end voice interview" });
+    }
+  });
+
+  app.post("/api/text-to-speech", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const { text, voice = "nova" } = req.body;
+      if (!text) {
+        return res.status(400).json({ error: "Text is required" });
+      }
+
+      const audioBuffer = await synthesizeSpeech(text, voice);
+      res.json({ audio: audioBuffer.toString("base64") });
+    } catch (error) {
+      console.error("TTS error:", error);
+      res.status(500).json({ error: "Failed to synthesize speech" });
     }
   });
 
