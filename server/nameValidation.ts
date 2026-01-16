@@ -20,8 +20,10 @@ export function normalizeName(name: string): string {
   return name
     .toLowerCase()
     .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\s+/g, " ")
-    .replace(/[^\w\s]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, "")
     .split(" ")
     .filter(part => part.length > 0)
     .sort()

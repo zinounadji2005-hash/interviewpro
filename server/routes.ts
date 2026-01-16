@@ -218,6 +218,12 @@ export async function registerRoutes(
         return res.status(404).json({ error: "CV not found" });
       }
 
+      if (cv.nameMatchScore !== null && cv.nameMatchScore < 60) {
+        return res.status(403).json({ 
+          error: "Cannot confirm CV with low name match score. Please upload a CV that matches your account name." 
+        });
+      }
+
       const updatedCv = await storage.updateCv(cvId, {
         nameValidationStatus: "verified",
       });
