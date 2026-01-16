@@ -625,6 +625,11 @@ export async function registerRoutes(
         return res.status(400).json({ error: "CV ID and interview type are required" });
       }
 
+      const cvIdNum = typeof cvId === "string" ? Number(cvId) : cvId;
+      if (isNaN(cvIdNum)) {
+        return res.status(400).json({ error: "Invalid CV ID" });
+      }
+
       const creditCost = 20;
       const currentCredits = await storage.getUserCredits(userId);
       if (currentCredits < creditCost) {
@@ -635,7 +640,7 @@ export async function registerRoutes(
         });
       }
 
-      const cv = await storage.getCv(cvId);
+      const cv = await storage.getCv(cvIdNum);
       if (!cv || cv.userId !== userId) {
         return res.status(404).json({ error: "CV not found" });
       }
@@ -644,7 +649,7 @@ export async function registerRoutes(
 
       const dbSession = await storage.createInterviewSession({
         userId,
-        cvId: cvId ? Number(cvId) : null,
+        cvId: cvIdNum,
         interviewType: `voice_${interviewType}`,
         status: "in_progress",
       });
@@ -749,20 +754,22 @@ export async function registerRoutes(
             structure: e.structure,
           }));
 
-        const evalResult = await generateSessionEvaluation(qaHistory, individualScores);
+        if (qaHistory.length > 0 && individualScores.length > 0) {
+          const evalResult = await generateSessionEvaluation(qaHistory, individualScores);
 
-        await storage.createEvaluation({
-          sessionId: session.dbSessionId,
-          overallScore: evalResult.overallScore,
-          communicationScore: evalResult.communicationScore,
-          confidenceScore: evalResult.confidenceScore,
-          relevanceScore: evalResult.relevanceScore,
-          structureScore: evalResult.structureScore,
-          topMistakes: evalResult.topMistakes,
-          topImprovements: evalResult.topImprovements,
-          focusPoint: evalResult.focusPoint,
-          detailedFeedback: evalResult.detailedFeedback,
-        });
+          await storage.createEvaluation({
+            sessionId: session.dbSessionId,
+            overallScore: evalResult.overallScore,
+            communicationScore: evalResult.communicationScore,
+            confidenceScore: evalResult.confidenceScore,
+            relevanceScore: evalResult.relevanceScore,
+            structureScore: evalResult.structureScore,
+            topMistakes: evalResult.topMistakes,
+            topImprovements: evalResult.topImprovements,
+            focusPoint: evalResult.focusPoint,
+            detailedFeedback: evalResult.detailedFeedback,
+          });
+        }
 
         await storage.updateInterviewSession(session.dbSessionId, {
           status: "completed",
