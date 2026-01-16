@@ -96,10 +96,11 @@ export async function registerRoutes(
       let textContent = "";
       
       if (file.mimetype === "application/pdf") {
-        const pdfParseModule = await import("pdf-parse") as any;
-        const pdfParse = pdfParseModule.default || pdfParseModule;
-        const pdfData = await pdfParse(file.buffer);
-        textContent = pdfData.text;
+        const { PDFParse } = await import("pdf-parse");
+        const parser = new PDFParse({ data: file.buffer });
+        await parser.load();
+        const result = await parser.getText();
+        textContent = result.text;
       } else if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
         const mammoth = await import("mammoth");
         const result = await mammoth.extractRawText({ buffer: file.buffer });
