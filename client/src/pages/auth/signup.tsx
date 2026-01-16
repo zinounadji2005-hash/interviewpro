@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "wouter";
@@ -18,10 +19,20 @@ export default function Signup() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     
+    if (!agreedToTerms) {
+      toast({ 
+        title: "Terms required", 
+        description: "Please agree to the Terms of Use and Privacy Policy to continue.", 
+        variant: "destructive" 
+      });
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast({ 
         title: "Passwords don't match", 
@@ -144,6 +155,27 @@ export default function Signup() {
                 required
                 data-testid="input-confirm-password"
               />
+            </div>
+            <div className="flex items-start space-x-2 pt-2">
+              <Checkbox
+                id="terms"
+                checked={agreedToTerms}
+                onCheckedChange={(checked) => setAgreedToTerms(checked === true)}
+                data-testid="checkbox-terms"
+              />
+              <label
+                htmlFor="terms"
+                className="text-sm text-muted-foreground leading-tight cursor-pointer"
+              >
+                I agree to the{" "}
+                <Link href="/terms" className="text-primary hover:underline" target="_blank">
+                  Terms of Use
+                </Link>{" "}
+                and{" "}
+                <Link href="/privacy" className="text-primary hover:underline" target="_blank">
+                  Privacy Policy
+                </Link>
+              </label>
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">

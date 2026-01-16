@@ -20,6 +20,11 @@ import VoiceInterview from "@/pages/dashboard/voice-interview";
 import AdaptiveInterview from "@/pages/dashboard/adaptive-interview";
 import Logout from "@/pages/logout";
 import NotFound from "@/pages/not-found";
+import Terms from "@/pages/legal/terms";
+import Privacy from "@/pages/legal/privacy";
+import AcceptableUse from "@/pages/legal/acceptable-use";
+import RefundPolicy from "@/pages/legal/refund-policy";
+import AIDisclaimer from "@/pages/legal/ai-disclaimer";
 
 function AuthenticatedRoutes() {
   return (
@@ -61,6 +66,11 @@ function Router() {
       <Route path="/signup" component={Signup} />
       <Route path="/forgot-password" component={ForgotPassword} />
       <Route path="/logout" component={Logout} />
+      <Route path="/terms" component={Terms} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/acceptable-use" component={AcceptableUse} />
+      <Route path="/refund-policy" component={RefundPolicy} />
+      <Route path="/ai-disclaimer" component={AIDisclaimer} />
       {user ? (
         <AuthenticatedRoutes />
       ) : (
