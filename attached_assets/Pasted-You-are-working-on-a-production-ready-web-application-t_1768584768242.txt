@@ -1,0 +1,112 @@
+You are working on a production-ready web application that provides AI-powered CV optimization and mock job interviews.
+
+Task:
+Add all essential legal and platform policies required for a professional, trustworthy, and compliant SaaS product.
+
+---
+
+1. Required Policies to Create
+
+You must create the following pages and link them clearly in the footer and during user registration:
+
+A. Terms of Use (Terms & Conditions)
+B. Privacy Policy
+C. Acceptable Use Policy
+D. Refund & Credit Policy
+E. Disclaimer (AI Usage Disclaimer)
+
+---
+
+2. Terms of Use – Requirements
+
+The Terms of Use must:
+- Define the platform as an AI-powered career preparation tool
+- Clarify that the service does NOT guarantee employment or interview success
+- Specify user responsibilities (accurate information, personal CV only)
+- Prohibit misuse (impersonation, uploading others’ CVs, abuse of credits)
+- Define account suspension or termination conditions
+- Clarify intellectual property ownership
+- Include limitation of liability
+- Specify governing law and dispute handling (generic, not jurisdiction-specific)
+
+Tone:
+Professional, clear, non-aggressive, user-friendly.
+
+---
+
+3. Privacy Policy – Requirements
+
+The Privacy Policy must clearly explain:
+- What data is collected (name, email, CV content, interview answers, voice recordings if applicable)
+- Why data is collected (service delivery, improvement, security)
+- How data is stored and protected
+- That CVs and interview data are NOT shared with third parties
+- How long data is retained
+- User rights (access, correction, deletion)
+- Use of cookies and analytics (if applicable)
+
+Important:
+- Emphasize data confidentiality and security
+- Do NOT claim compliance with regulations unless implemented (e.g. GDPR)
+
+---
+
+4. Acceptable Use Policy
+
+Define what users are NOT allowed to do, including:
+- Uploading CVs that are not their own
+- Creating multiple accounts to bypass credit limits
+- Using the platform for illegal or deceptive purposes
+- Attempting to reverse engineer or exploit the AI
+
+State consequences clearly but professionally.
+
+---
+
+5. Refund & Credit Policy
+
+Clearly explain:
+- How credits are purchased
+- What credits can be used for
+- That credits are non-transferable
+- Conditions under which refunds are allowed or not allowed
+- Handling of failed payments or unused credits
+
+Keep this section transparent and fair.
+
+---
+
+6. AI Disclaimer
+
+Include a clear disclaimer stating:
+- AI-generated feedback is advisory, not professional hiring advice
+- Users remain responsible for final CV content and interview performance
+- AI may produce imperfect or incomplete results
+
+This disclaimer must appear:
+- In the policies
+- Subtly within the product (e.g. footer or dashboard info)
+
+---
+
+7. UI & Integration Requirements
+
+- Create dedicated pages for each policy
+- Ensure all policies are accessible before account creation
+- Add a required checkbox:
+  “I agree to the Terms of Use and Privacy Policy”
+- Link policies in the footer on all pages
+
+---
+
+8. Constraints
+
+- Do NOT copy content from other companies
+- Do NOT include false legal claims
+- Do NOT overpromise compliance
+- Keep language understandable for non-lawyers
+
+---
+
+Goal:
+Provide transparent, trustworthy, and legally responsible policies that protect both users and the platform while maintaining a professional SaaS standard.
