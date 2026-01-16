@@ -346,7 +346,7 @@ export default function VoiceInterview() {
 
   if (stage === "setup") {
     return (
-      <div className="container mx-auto max-w-2xl py-8 px-4">
+      <div className="container mx-auto max-w-2xl py-4 sm:py-8 px-4">
         <Button 
           variant="ghost" 
           onClick={() => setLocation("/dashboard")}
@@ -448,9 +448,9 @@ export default function VoiceInterview() {
 
   if (stage === "complete") {
     return (
-      <div className="container mx-auto max-w-3xl py-8 px-4">
+      <div className="container mx-auto max-w-3xl py-4 sm:py-8 px-4">
         <Card>
-          <CardHeader className="text-center">
+          <CardHeader className="text-center px-4 sm:px-6">
             <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mb-4">
               <CheckCircle2 className="h-8 w-8 text-emerald-500" />
             </div>
@@ -518,8 +518,8 @@ export default function VoiceInterview() {
   }
 
   return (
-    <div className="container mx-auto max-w-3xl py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
+    <div className="container mx-auto max-w-3xl py-4 sm:py-8 px-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
         <Button 
           variant="ghost" 
           onClick={() => {

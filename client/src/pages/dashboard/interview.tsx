@@ -81,7 +81,7 @@ export default function Interview() {
   if (inProgressSession) {
     return (
       <DashboardLayout title="Mock Interview">
-        <div className="p-6 max-w-4xl mx-auto">
+        <div className="p-4 sm:p-6 max-w-4xl mx-auto">
           <Card className="border-card-border">
             <CardContent className="p-8 text-center space-y-6">
               <div className="w-16 h-16 mx-auto rounded-2xl bg-chart-4/10 flex items-center justify-center">
@@ -114,9 +114,9 @@ export default function Interview() {
 
   return (
     <DashboardLayout title="Mock Interview">
-      <div className="p-6 max-w-4xl mx-auto space-y-8">
+      <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6 sm:space-y-8">
         <div className="space-y-2">
-          <h2 className="font-serif text-2xl font-bold">Start a Mock Interview</h2>
+          <h2 className="font-serif text-xl sm:text-2xl font-bold">Start a Mock Interview</h2>
           <p className="text-muted-foreground">
             Practice with AI-powered interviews tailored to your CV and career goals
           </p>

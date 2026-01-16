@@ -55,7 +55,7 @@ export default function ProgressPage() {
   if (isLoading) {
     return (
       <DashboardLayout title="Progress">
-        <div className="p-6 max-w-6xl mx-auto space-y-6">
+        <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-4 sm:space-y-6">
           <Skeleton className="h-48 w-full" />
           <div className="grid md:grid-cols-2 gap-6">
             <Skeleton className="h-64" />
@@ -76,9 +76,9 @@ export default function ProgressPage() {
 
   return (
     <DashboardLayout title="Progress">
-      <div className="p-6 max-w-6xl mx-auto space-y-8">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 sm:space-y-8">
         <div className="space-y-2">
-          <h2 className="font-serif text-2xl font-bold">Your Progress</h2>
+          <h2 className="font-serif text-xl sm:text-2xl font-bold">Your Progress</h2>
           <p className="text-muted-foreground">
             Track your improvement across interview sessions
           </p>

@@ -6,7 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function AIDisclaimer() {
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
+    <div className="min-h-screen bg-background py-4 sm:py-8 px-4">
       <div className="container mx-auto max-w-4xl">
         <Link href="/">
           <Button variant="ghost" size="sm" className="mb-6" data-testid="button-back-home">
@@ -22,13 +22,13 @@ export default function AIDisclaimer() {
                 <Bot className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle className="text-3xl font-heading">AI Disclaimer</CardTitle>
+                <CardTitle className="text-2xl sm:text-3xl font-heading">AI Disclaimer</CardTitle>
                 <p className="text-sm text-muted-foreground">Last updated: January 2026</p>
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[calc(100vh-280px)]">
+            <ScrollArea className="h-[calc(100vh-240px)] sm:h-[calc(100vh-280px)]">
               <div className="prose prose-sm dark:prose-invert max-w-none space-y-6">
                 <section>
                   <div className="p-4 rounded-xl bg-chart-4/10 border border-chart-4/20">

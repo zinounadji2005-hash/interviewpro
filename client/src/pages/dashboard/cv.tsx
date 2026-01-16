@@ -182,7 +182,7 @@ export default function CVManager() {
 
   return (
     <DashboardLayout title="CV Manager">
-      <div className="p-6 max-w-6xl mx-auto space-y-8">
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto space-y-6 sm:space-y-8">
         {!latestCv ? (
           <Card className="border-card-border">
             <CardHeader>
@@ -292,9 +292,9 @@ export default function CVManager() {
           </Card>
         ) : (
           <>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="space-y-1">
-                <h2 className="font-serif text-2xl font-bold">Your CV</h2>
+                <h2 className="font-serif text-xl sm:text-2xl font-bold">Your CV</h2>
                 <p className="text-muted-foreground">
                   {latestCv.improvedText ? "Review your optimized CV" : "Optimize your CV for better results"}
                 </p>
