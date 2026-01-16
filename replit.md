@@ -81,12 +81,21 @@ Preferred communication style: Simple, everyday language.
   - Improvement delta (25% weight, change from previous session)
   - Labels: Not Ready (<50), Improving (50-69), Interview Ready (70+)
 
+### Legal & Policy Pages
+- **Terms of Use** (/terms): User responsibilities, prohibited activities, IP rights, liability limits
+- **Privacy Policy** (/privacy): Data collection, storage, sharing, user rights with exercise process
+- **Acceptable Use Policy** (/acceptable-use): Prohibited activities, CV ownership rules, consequences
+- **Refund & Credit Policy** (/refund-policy): Credit system details, refund eligibility, process
+- **AI Disclaimer** (/ai-disclaimer): Advisory nature of AI, limitations, user responsibility
+- **Integration**: Footer links on all pages, required checkbox on signup, dashboard footer disclaimer
+
 ### Project Structure
 ```
 client/           # React frontend
   src/
     components/   # UI components (landing, dashboard, ui primitives)
-    pages/        # Route pages (landing, dashboard sections)
+    pages/        # Route pages (landing, dashboard sections, legal)
+      legal/      # Policy pages (terms, privacy, acceptable-use, refund-policy, ai-disclaimer)
     hooks/        # Custom React hooks (auth, toast, mobile detection)
     lib/          # Utilities (query client, auth utils)
 server/           # Express backend
