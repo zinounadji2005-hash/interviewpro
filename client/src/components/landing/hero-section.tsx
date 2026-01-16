@@ -21,7 +21,7 @@ function AnimatedText() {
   }, []);
 
   return (
-    <div className="h-[1.2em] relative overflow-hidden">
+    <div className="min-h-[1.5em] relative">
       <AnimatePresence mode="wait">
         <motion.span
           key={currentIndex}
@@ -135,7 +135,7 @@ export function HeroSection() {
                 Ace your next interview
               </motion.h1>
               <motion.div
-                className="font-heading text-3xl font-bold sm:text-4xl lg:text-5xl xl:text-6xl"
+                className="font-heading text-2xl font-bold sm:text-3xl lg:text-4xl xl:text-5xl"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.8 }}
