@@ -39,6 +39,17 @@ export async function registerRoutes(
 ): Promise<Server> {
   await setupSupabaseAuth(app);
 
+  // Public endpoint - no authentication required
+  app.get("/api/user-count", async (req: Request, res: Response) => {
+    try {
+      const count = await storage.getUserCount();
+      res.json({ count });
+    } catch (error) {
+      console.error("Get user count error:", error);
+      res.status(500).json({ error: "Failed to get user count" });
+    }
+  });
+
   app.get("/api/dashboard", isAuthenticated, async (req: Request, res: Response) => {
     try {
       const userId = getUserId(req);

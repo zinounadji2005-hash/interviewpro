@@ -18,10 +18,11 @@ import {
   type InsertWeaknessPattern,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and } from "drizzle-orm";
+import { eq, desc, and, count } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
+  getUserCount(): Promise<number>;
   getUserCredits(userId: string): Promise<number>;
   deductCredits(userId: string, amount: number): Promise<boolean>;
   addCredits(userId: string, amount: number): Promise<boolean>;
@@ -61,6 +62,11 @@ export class DatabaseStorage implements IStorage {
   async getUser(id: string): Promise<User | undefined> {
     const [user] = await db.select().from(users).where(eq(users.id, id));
     return user || undefined;
+  }
+
+  async getUserCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(users);
+    return result?.count ?? 0;
   }
 
   async getUserCredits(userId: string): Promise<number> {
