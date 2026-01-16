@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Briefcase, ArrowLeft, Loader2 } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 
 export default function Signup() {
@@ -70,9 +70,11 @@ export default function Signup() {
       </Link>
 
       <div className="flex items-center gap-3 mb-8">
-        <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center">
-          <Briefcase className="h-5 w-5 text-primary-foreground" />
-        </div>
+        <img 
+          src="/assets/logo.png" 
+          alt="InterviewPro Logo" 
+          className="h-10 w-10 rounded-xl object-cover"
+        />
         <span className="text-2xl font-bold font-heading">InterviewPro</span>
       </div>
 
