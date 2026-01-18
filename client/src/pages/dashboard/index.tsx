@@ -6,6 +6,7 @@ import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import { CreditHistory } from "@/components/dashboard/credit-history";
 import { useAuth } from "@/hooks/use-auth";
 import { 
   FileText, 
@@ -267,46 +268,50 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {data?.sessions && data.sessions.length > 0 && (
-          <Card className="border-card-border">
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <CardTitle>Recent Activity</CardTitle>
-              <Link href="/dashboard/history">
-                <Button variant="ghost" size="sm" className="gap-1" data-testid="link-view-all-history">
-                  View All <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {data.sessions.slice(0, 3).map((session) => (
-                  <div 
-                    key={session.id} 
-                    className="flex items-center justify-between p-4 rounded-lg bg-muted/50"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="p-2 rounded-lg bg-background">
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+        <div className="grid gap-6 lg:grid-cols-2">
+          {data?.sessions && data.sessions.length > 0 && (
+            <Card className="border-card-border">
+              <CardHeader className="flex flex-row items-center justify-between gap-2">
+                <CardTitle>Recent Activity</CardTitle>
+                <Link href="/dashboard/history">
+                  <Button variant="ghost" size="sm" className="gap-1" data-testid="link-view-all-history">
+                    View All <ArrowRight className="h-4 w-4" />
+                  </Button>
+                </Link>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {data.sessions.slice(0, 3).map((session) => (
+                    <div 
+                      key={session.id} 
+                      className="flex items-center justify-between p-4 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="p-2 rounded-lg bg-background">
+                          <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">
+                            {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview
+                          </p>
+                          <p className="text-xs text-muted-foreground flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            {new Date(session.createdAt).toLocaleDateString()}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-sm">
-                          {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview
-                        </p>
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {new Date(session.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
+                      <Badge variant={session.status === "completed" ? "default" : "secondary"}>
+                        {session.status === "completed" ? "Completed" : "In Progress"}
+                      </Badge>
                     </div>
-                    <Badge variant={session.status === "completed" ? "default" : "secondary"}>
-                      {session.status === "completed" ? "Completed" : "In Progress"}
-                    </Badge>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
+          <CreditHistory />
+        </div>
       </div>
     </DashboardLayout>
   );
