@@ -54,17 +54,31 @@ Preferred communication style: Simple, everyday language.
 - **Scoring**: Real-time tracking of communication, confidence, relevance, structure (0-100)
 - **Adaptive Questioning**: AI adjusts questions based on candidate's previous answers
 
-### Credit System
+### Credit System (Database-Driven Monetization)
 - **Default Balance**: New users start with 100 credits
-- **Credit Costs**:
-  - CV optimization: 10 credits
-  - Start new interview: 20 credits
-  - Voice interview session: 20 credits
-  - Interview evaluation: 15 credits
-- **Storage**: credits field in users table (integer, default 100)
-- **API Endpoints**: /api/credits (GET), credits included in /api/dashboard response
+- **Feature Costs** (configurable in database via `feature_costs` table):
+  - cv_optimization: 10 credits
+  - start_interview: 20 credits
+  - voice_interview: 20 credits
+  - interview_evaluation: 15 credits
+- **Credit Packages** (configurable in database via `credit_packages` table):
+  - Supports multiple packages with name, description, credit amount, price, currency
+  - Active/inactive flag for visibility control
+- **Transaction Logging** (via `credit_transactions` table):
+  - All credit mutations logged with balanceAfter, transactionType, source, featureKey
+  - Idempotency keys prevent duplicate credit grants from payment callbacks
+  - Sources: payment, signup_bonus, referral, promo_code, admin_grant, feature_use, refund
+- **Credit Service** (server/creditService.ts):
+  - Atomic operations with database transactions
+  - Negative balance prevention
+  - Idempotent grant operations via unique keys
+- **API Endpoints**:
+  - GET /api/feature-costs - List all feature costs (public)
+  - GET /api/credit-packages - List all active packages (public)
+  - GET /api/credit-history - User's transaction history (authenticated)
+  - POST /api/credits/grant - Grant credits with idempotency (authenticated)
 - **Error Handling**: HTTP 402 for insufficient credits with descriptive messages
-- **UI**: Credit balance card on dashboard with low-balance warning (<30 credits)
+- **UI**: Credit balance card + credit history component on dashboard
 
 ### Intelligence Layer
 - **Executive Feedback Summary**: After each interview evaluation:
