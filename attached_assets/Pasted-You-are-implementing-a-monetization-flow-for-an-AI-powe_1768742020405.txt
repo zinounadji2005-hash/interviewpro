@@ -1,0 +1,93 @@
+You are implementing a monetization flow for an AI-powered CV and interview platform.
+
+Core Business Rule:
+New users must receive enough free credits to:
+- Upload and process their CV
+- Complete their first interview session
+
+However:
+They must NOT be able to view the final results, feedback, or analysis unless they purchase additional credits.
+
+---
+
+1. Free Credit Allocation
+
+- Upon successful user registration, automatically grant a limited amount of free credits.
+- These free credits must be sufficient to:
+  - Upload and analyze one CV
+  - Complete one full interview session
+- Free credits are for trial purposes only.
+
+---
+
+2. Usage Flow (Critical)
+
+Allowed with free credits:
+- CV upload
+- CV analysis processing
+- Interview questions and user answers
+- Interview completion
+
+Restricted without payment:
+- Final CV improvement output
+- Interview evaluation scores
+- Detailed feedback and recommendations
+- Model answers
+- Improvement analysis
+
+---
+
+3. Results Paywall Logic
+
+- After the interview is completed:
+  - Process all results normally in the backend.
+  - Do NOT display results to the user.
+- Show a paywall screen stating clearly:
+  “Your interview analysis is ready. Unlock your results by purchasing credits.”
+
+- The user must understand that:
+  - Results already exist
+  - Payment unlocks access, not processing
+
+---
+
+4. Credit Deduction Rules
+
+- Free credits are deducted normally for trial actions.
+- Result-viewing features require paid credits.
+- The system must distinguish between:
+  - free_credits
+  - paid_credits (or track credit source in transactions)
+
+---
+
+5. UX Principles
+
+- Be transparent: no hidden conditions.
+- Do not surprise the user earlier in the flow.
+- Show clear value preview before paywall (blurred results, partial insights, or progress indicators).
+- Use respectful, non-aggressive language.
+
+---
+
+6. Technical Constraints
+
+- Supabase is the source of truth for credit balances and transactions.
+- Paywall checks must be enforced server-side.
+- Do NOT allow client-side bypass.
+- Ensure idempotency and consistency.
+
+---
+
+7. Future Flexibility
+
+- Allow business logic to adjust:
+  - Free credit amount
+  - Which features are locked
+  - Paywall trigger points
+without code rewrites.
+
+---
+
+Goal:
+Allow users to fully experience the product’s core value, then require payment only at the moment results are revealed, maximizing conversion while preserving trust.
