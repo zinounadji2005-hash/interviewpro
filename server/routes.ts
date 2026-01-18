@@ -27,6 +27,9 @@ import {
   type VoiceInterviewState,
 } from "./voice-interview";
 import { validateCVName, normalizeName } from "./nameValidation";
+import { creditService } from "./creditService";
+import { seedFeatureCosts } from "./seedFeatureCosts";
+import { FEATURE_KEYS, type CreditTransaction } from "@shared/schema";
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
@@ -39,6 +42,8 @@ export async function registerRoutes(
   app: Express
 ): Promise<Server> {
   await setupSupabaseAuth(app);
+  
+  await seedFeatureCosts();
 
   // Public endpoint - no authentication required
   app.get("/api/user-count", async (req: Request, res: Response) => {
@@ -101,6 +106,77 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Get credits error:", error);
       res.status(500).json({ error: "Failed to get credits" });
+    }
+  });
+
+  app.get("/api/credit-packages", async (req: Request, res: Response) => {
+    try {
+      const packages = await creditService.getActivePackages();
+      res.json(packages);
+    } catch (error) {
+      console.error("Get packages error:", error);
+      res.status(500).json({ error: "Failed to get credit packages" });
+    }
+  });
+
+  app.get("/api/feature-costs", async (req: Request, res: Response) => {
+    try {
+      const costs = await creditService.getAllFeatureCosts();
+      res.json(costs);
+    } catch (error) {
+      console.error("Get feature costs error:", error);
+      res.status(500).json({ error: "Failed to get feature costs" });
+    }
+  });
+
+  app.get("/api/credit-history", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const limit = parseInt(req.query.limit as string) || 50;
+      const transactions = await creditService.getUserTransactionHistory(userId, Math.min(limit, 100));
+      res.json(transactions);
+    } catch (error) {
+      console.error("Get credit history error:", error);
+      res.status(500).json({ error: "Failed to get credit history" });
+    }
+  });
+
+  app.post("/api/credits/grant", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const { amount, source, transactionType, packageId, referenceId, idempotencyKey, metadata } = req.body;
+
+      if (!amount || !source) {
+        return res.status(400).json({ error: "Missing required fields: amount, source" });
+      }
+
+      const result = await creditService.grantCredits({
+        userId,
+        amount,
+        source,
+        transactionType,
+        packageId,
+        referenceId,
+        idempotencyKey,
+        metadata
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({ 
+        success: true, 
+        newBalance: result.newBalance, 
+        transactionId: result.transactionId 
+      });
+    } catch (error) {
+      console.error("Grant credits error:", error);
+      res.status(500).json({ error: "Failed to grant credits" });
     }
   });
 
@@ -184,10 +260,14 @@ export async function registerRoutes(
         return res.status(404).json({ error: "CV not found" });
       }
 
-      const creditCost = 10;
-      const hasCredits = await storage.deductCredits(userId, creditCost);
-      if (!hasCredits) {
-        return res.status(402).json({ error: "Insufficient credits", required: creditCost });
+      const deductResult = await creditService.deductCredits({
+        userId,
+        featureKey: FEATURE_KEYS.CV_OPTIMIZATION,
+        referenceId: `cv-${cvId}`
+      });
+      if (!deductResult.success) {
+        const cost = await creditService.getFeatureCost(FEATURE_KEYS.CV_OPTIMIZATION) || 0;
+        return res.status(402).json({ error: deductResult.error || "Insufficient credits", required: cost });
       }
 
       const { targetRole, jobDescription } = req.body;
@@ -285,10 +365,13 @@ export async function registerRoutes(
       const userId = getUserId(req);
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const creditCost = 20;
-      const hasCredits = await storage.deductCredits(userId, creditCost);
-      if (!hasCredits) {
-        return res.status(402).json({ error: "Insufficient credits", required: creditCost });
+      const deductResult = await creditService.deductCredits({
+        userId,
+        featureKey: FEATURE_KEYS.START_INTERVIEW
+      });
+      if (!deductResult.success) {
+        const cost = await creditService.getFeatureCost(FEATURE_KEYS.START_INTERVIEW) || 0;
+        return res.status(402).json({ error: deductResult.error || "Insufficient credits", required: cost });
       }
 
       const { interviewType, cvId } = req.body;
@@ -340,10 +423,13 @@ export async function registerRoutes(
       const userId = getUserId(req);
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const creditCost = 20;
-      const hasCredits = await storage.deductCredits(userId, creditCost);
-      if (!hasCredits) {
-        return res.status(402).json({ error: "Insufficient credits", required: creditCost });
+      const deductResult = await creditService.deductCredits({
+        userId,
+        featureKey: FEATURE_KEYS.START_INTERVIEW
+      });
+      if (!deductResult.success) {
+        const cost = await creditService.getFeatureCost(FEATURE_KEYS.START_INTERVIEW) || 0;
+        return res.status(402).json({ error: deductResult.error || "Insufficient credits", required: cost });
       }
 
       const { interviewType, cvId } = req.body;
@@ -554,10 +640,14 @@ export async function registerRoutes(
         return res.status(400).json({ error: "No questions answered. Please answer at least one question." });
       }
 
-      const creditCost = 15;
-      const hasCredits = await storage.deductCredits(userId, creditCost);
-      if (!hasCredits) {
-        return res.status(402).json({ error: "Insufficient credits", required: creditCost });
+      const deductResult = await creditService.deductCredits({
+        userId,
+        featureKey: FEATURE_KEYS.INTERVIEW_EVALUATION,
+        referenceId: `session-${sessionId}`
+      });
+      if (!deductResult.success) {
+        const cost = await creditService.getFeatureCost(FEATURE_KEYS.INTERVIEW_EVALUATION) || 0;
+        return res.status(402).json({ error: deductResult.error || "Insufficient credits", required: cost });
       }
 
       const individualScores: { communication: number; confidence: number; relevance: number; structure: number }[] = [];
@@ -708,22 +798,25 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Invalid CV ID" });
       }
 
-      const creditCost = 20;
-      const currentCredits = await storage.getUserCredits(userId);
-      if (currentCredits < creditCost) {
-        return res.status(402).json({ 
-          error: "Insufficient credits", 
-          required: creditCost, 
-          current: currentCredits 
-        });
-      }
-
       const cv = await storage.getCv(cvIdNum);
       if (!cv || cv.userId !== userId) {
         return res.status(404).json({ error: "CV not found" });
       }
 
-      await storage.deductCredits(userId, creditCost);
+      const deductResult = await creditService.deductCredits({
+        userId,
+        featureKey: FEATURE_KEYS.VOICE_INTERVIEW,
+        referenceId: `voice-cv-${cvIdNum}`
+      });
+      if (!deductResult.success) {
+        const cost = await creditService.getFeatureCost(FEATURE_KEYS.VOICE_INTERVIEW) || 0;
+        const currentCredits = await storage.getUserCredits(userId);
+        return res.status(402).json({ 
+          error: deductResult.error || "Insufficient credits", 
+          required: cost, 
+          current: currentCredits 
+        });
+      }
 
       const dbSession = await storage.createInterviewSession({
         userId,
