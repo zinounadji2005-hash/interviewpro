@@ -54,31 +54,43 @@ Preferred communication style: Simple, everyday language.
 - **Scoring**: Real-time tracking of communication, confidence, relevance, structure (0-100)
 - **Adaptive Questioning**: AI adjusts questions based on candidate's previous answers
 
-### Credit System (Database-Driven Monetization)
-- **Default Balance**: New users start with 100 credits
+### Credit System (Freemium Monetization)
+- **Dual Credit Types**: Users have `freeCredits` and `paidCredits` tracked separately
+  - Free credits granted on signup (30 credits - covers CV upload + one interview)
+  - Paid credits purchased for unlocking results and additional features
+  - Free credits consumed first, then paid credits
 - **Feature Costs** (configurable in database via `feature_costs` table):
   - cv_optimization: 10 credits
   - start_interview: 20 credits
   - voice_interview: 20 credits
-  - interview_evaluation: 15 credits
+  - interview_evaluation: 0 credits (processing is free)
+  - unlock_results: 15 paid credits (requires paid credits only)
+- **Results Paywall**:
+  - Evaluations have `resultsUnlocked` flag (default false)
+  - Locked results return nullified scores and paywall object from API
+  - POST /api/evaluations/:id/unlock to unlock with paid credits
+  - Transparent UX shows what's included when unlocked
 - **Credit Packages** (configurable in database via `credit_packages` table):
   - Supports multiple packages with name, description, credit amount, price, currency
   - Active/inactive flag for visibility control
 - **Transaction Logging** (via `credit_transactions` table):
   - All credit mutations logged with balanceAfter, transactionType, source, featureKey
+  - Tracks creditType field ("free", "paid", or "mixed") for audit trail
   - Idempotency keys prevent duplicate credit grants from payment callbacks
   - Sources: payment, signup_bonus, referral, promo_code, admin_grant, feature_use, refund
 - **Credit Service** (server/creditService.ts):
   - Atomic operations with database transactions
   - Negative balance prevention
   - Idempotent grant operations via unique keys
+  - Database-driven pricing - all costs fetched from feature_costs table
 - **API Endpoints**:
   - GET /api/feature-costs - List all feature costs (public)
   - GET /api/credit-packages - List all active packages (public)
   - GET /api/credit-history - User's transaction history (authenticated)
   - POST /api/credits/grant - Grant credits with idempotency (authenticated)
+  - POST /api/evaluations/:id/unlock - Unlock results with paid credits
 - **Error Handling**: HTTP 402 for insufficient credits with descriptive messages
-- **UI**: Credit balance card + credit history component on dashboard
+- **UI**: Credit balance card showing free/paid breakdown + credit history on dashboard
 
 ### Intelligence Layer
 - **Executive Feedback Summary**: After each interview evaluation:

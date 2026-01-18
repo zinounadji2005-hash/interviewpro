@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -18,8 +18,14 @@ import {
   Lightbulb,
   ArrowRight,
   CheckCircle2,
-  XCircle
+  XCircle,
+  Lock,
+  Unlock,
+  Coins,
+  Sparkles
 } from "lucide-react";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { Evaluation, InterviewSession, InterviewQuestion } from "@shared/schema";
 
 interface ComparisonData {
@@ -35,10 +41,18 @@ interface ComparisonData {
   structureChange: number;
 }
 
+interface PaywallData {
+  locked: boolean;
+  message: string;
+  unlockCost: number;
+  requiresPaidCredits: boolean;
+}
+
 interface EvaluationData {
   session: InterviewSession & { questions: InterviewQuestion[] };
-  evaluation: Evaluation;
+  evaluation: Evaluation & { resultsUnlocked?: boolean };
   comparison: ComparisonData | null;
+  paywall: PaywallData | null;
 }
 
 const scoreCategories = [
@@ -78,9 +92,33 @@ function getChangeKey(key: string): string {
 
 export default function EvaluationPage() {
   const params = useParams<{ id: string }>();
+  const { toast } = useToast();
 
   const { data, isLoading } = useQuery<EvaluationData>({
     queryKey: ["/api/evaluations", params.id],
+  });
+
+  const unlockMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/evaluations/${data?.evaluation.id}/unlock`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/evaluations", params.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/credits"] });
+      toast({
+        title: "Results Unlocked!",
+        description: "You can now view your full interview evaluation.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to unlock",
+        description: error.message || "Please try again or purchase more credits.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (isLoading) {
@@ -107,7 +145,131 @@ export default function EvaluationPage() {
     );
   }
 
-  const { session, evaluation, comparison } = data;
+  const { session, evaluation, comparison, paywall } = data;
+
+  if (paywall?.locked) {
+    return (
+      <DashboardLayout title="Interview Results">
+        <div className="p-4 sm:p-6 max-w-4xl mx-auto space-y-6">
+          <Card className="border-primary/30 overflow-hidden">
+            <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-8 sm:p-12 text-center">
+              <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+                <Lock className="h-10 w-10 text-primary" />
+              </div>
+              <h2 className="font-serif text-2xl sm:text-3xl font-bold mb-4">
+                Your Results Are Ready!
+              </h2>
+              <p className="text-muted-foreground max-w-md mx-auto mb-6">
+                {paywall.message}
+              </p>
+              
+              <div className="flex flex-col items-center gap-4">
+                <div className="flex items-center gap-2 text-lg">
+                  <Coins className="h-5 w-5 text-primary" />
+                  <span className="font-semibold">{paywall.unlockCost} credits</span>
+                  <Badge variant="secondary" className="text-xs">Paid credits only</Badge>
+                </div>
+                
+                <Button 
+                  size="lg" 
+                  onClick={() => unlockMutation.mutate()}
+                  disabled={unlockMutation.isPending}
+                  className="gap-2"
+                  data-testid="button-unlock-results"
+                >
+                  {unlockMutation.isPending ? (
+                    <>Unlocking...</>
+                  ) : (
+                    <>
+                      <Unlock className="h-4 w-4" />
+                      Unlock Full Results
+                    </>
+                  )}
+                </Button>
+                
+                <p className="text-xs text-muted-foreground">
+                  Need credits? <Link href="/dashboard" className="text-primary underline">Purchase more</Link>
+                </p>
+              </div>
+            </div>
+          </Card>
+          
+          <Card className="border-card-border">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-chart-4" />
+                What You'll Get
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <CheckCircle2 className="h-5 w-5 text-chart-2 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Overall Score</p>
+                    <p className="text-sm text-muted-foreground">See your total performance rating out of 100</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <CheckCircle2 className="h-5 w-5 text-chart-2 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Category Breakdown</p>
+                    <p className="text-sm text-muted-foreground">Communication, Confidence, Relevance, Structure scores</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <CheckCircle2 className="h-5 w-5 text-chart-2 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Key Mistakes</p>
+                    <p className="text-sm text-muted-foreground">Top 3 areas that need improvement</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <CheckCircle2 className="h-5 w-5 text-chart-2 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Model Answers</p>
+                    <p className="text-sm text-muted-foreground">See example answers for each question</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <CheckCircle2 className="h-5 w-5 text-chart-2 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Focus Point</p>
+                    <p className="text-sm text-muted-foreground">One actionable insight for maximum improvement</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
+                  <CheckCircle2 className="h-5 w-5 text-chart-2 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium">Progress Comparison</p>
+                    <p className="text-sm text-muted-foreground">Track improvement from previous interviews</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
+          <Card className="border-dashed border-muted-foreground/30 bg-muted/30">
+            <CardContent className="p-6">
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="p-3 rounded-lg bg-background">
+                  <MessageSquare className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <div className="text-center sm:text-left flex-1">
+                  <p className="font-medium">Interview Completed</p>
+                  <p className="text-sm text-muted-foreground">
+                    {session.interviewType.charAt(0).toUpperCase() + session.interviewType.slice(1)} Interview - Round {session.sessionNumber}
+                  </p>
+                </div>
+                <Badge variant="outline">{session.questions?.length || 0} questions answered</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
   const mistakes = evaluation.topMistakes as string[] || [];
   const improvements = evaluation.topImprovements as string[] || [];
 

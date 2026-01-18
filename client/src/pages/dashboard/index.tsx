@@ -32,7 +32,9 @@ interface DashboardData {
   cvs: CV[];
   sessions: InterviewSession[];
   latestEvaluation: Evaluation | null;
-  credits: number;
+  freeCredits: number;
+  paidCredits: number;
+  totalCredits: number;
   readinessScore: ReadinessScore | null;
 }
 
@@ -46,8 +48,10 @@ export default function Dashboard() {
   const hasCv = data?.cvs && data.cvs.length > 0;
   const hasCompletedInterview = data?.sessions?.some(s => s.status === "completed");
   const latestScore = data?.latestEvaluation?.overallScore;
-  const credits = data?.credits ?? 0;
-  const isLowCredits = credits < 30;
+  const freeCredits = data?.freeCredits ?? 0;
+  const paidCredits = data?.paidCredits ?? 0;
+  const totalCredits = data?.totalCredits ?? 0;
+  const isLowCredits = totalCredits < 30;
   const readinessScore = data?.readinessScore;
 
   const getReadinessLabel = (label: string) => {
@@ -194,20 +198,20 @@ export default function Dashboard() {
               {isLoading ? (
                 <Skeleton className="h-8 w-24" />
               ) : (
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <p className={`text-2xl font-bold ${isLowCredits ? 'text-destructive' : ''}`} data-testid="text-credit-balance">
-                    {credits}
+                    {totalCredits}
                   </p>
-                  <p className="text-xs text-muted-foreground">
-                    {isLowCredits ? (
-                      <span className="text-destructive flex items-center gap-1">
-                        <AlertCircle className="h-3 w-3" />
-                        Low balance
-                      </span>
-                    ) : (
-                      "Available for use"
-                    )}
-                  </p>
+                  <div className="flex gap-2 text-xs">
+                    <span className="text-muted-foreground">Free: {freeCredits}</span>
+                    <span className="text-muted-foreground">Paid: {paidCredits}</span>
+                  </div>
+                  {isLowCredits && (
+                    <p className="text-xs text-destructive flex items-center gap-1">
+                      <AlertCircle className="h-3 w-3" />
+                      Low balance
+                    </p>
+                  )}
                 </div>
               )}
             </CardContent>

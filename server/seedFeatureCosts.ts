@@ -24,8 +24,14 @@ const initialFeatureCosts = [
   {
     featureKey: FEATURE_KEYS.INTERVIEW_EVALUATION,
     featureName: "Interview Evaluation",
+    creditCost: 0,
+    description: "Processing interview evaluation (free with interview)"
+  },
+  {
+    featureKey: FEATURE_KEYS.UNLOCK_RESULTS,
+    featureName: "Unlock Results",
     creditCost: 15,
-    description: "Comprehensive feedback and scoring for interview"
+    description: "Unlock interview results and detailed feedback (requires paid credits)"
   }
 ];
 

@@ -81,7 +81,7 @@ export async function registerRoutes(
       const userId = getUserId(req);
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const [cvs, sessions, latestEvaluation, credits, readinessScore] = await Promise.all([
+      const [cvs, sessions, latestEvaluation, creditBalance, readinessScore] = await Promise.all([
         storage.getCvsByUserId(userId),
         storage.getInterviewsByUserId(userId),
         storage.getLatestEvaluationByUserId(userId),
@@ -89,7 +89,15 @@ export async function registerRoutes(
         storage.calculateReadinessScore(userId),
       ]);
 
-      res.json({ cvs, sessions, latestEvaluation, credits, readinessScore });
+      res.json({ 
+        cvs, 
+        sessions, 
+        latestEvaluation, 
+        freeCredits: creditBalance.freeCredits,
+        paidCredits: creditBalance.paidCredits,
+        totalCredits: creditBalance.totalCredits,
+        readinessScore 
+      });
     } catch (error) {
       console.error("Dashboard error:", error);
       res.status(500).json({ error: "Failed to load dashboard" });
@@ -101,8 +109,8 @@ export async function registerRoutes(
       const userId = getUserId(req);
       if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-      const credits = await storage.getUserCredits(userId);
-      res.json({ credits });
+      const creditBalance = await storage.getUserCredits(userId);
+      res.json(creditBalance);
     } catch (error) {
       console.error("Get credits error:", error);
       res.status(500).json({ error: "Failed to get credits" });
@@ -171,12 +179,47 @@ export async function registerRoutes(
 
       res.json({ 
         success: true, 
-        newBalance: result.newBalance, 
+        newFreeBalance: result.newFreeBalance,
+        newPaidBalance: result.newPaidBalance,
+        totalBalance: result.totalBalance,
         transactionId: result.transactionId 
       });
     } catch (error) {
       console.error("Grant credits error:", error);
       res.status(500).json({ error: "Failed to grant credits" });
+    }
+  });
+
+  app.post("/api/evaluations/:id/unlock", isAuthenticated, async (req: Request, res: Response) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+      const evaluationId = parseInt(req.params.id);
+      if (isNaN(evaluationId)) {
+        return res.status(400).json({ error: "Invalid evaluation ID" });
+      }
+
+      const result = await creditService.unlockResults(userId, evaluationId);
+
+      if (!result.success) {
+        const statusCode = result.error?.includes("Insufficient") ? 402 : 400;
+        return res.status(statusCode).json({ 
+          error: result.error,
+          requiresPaidCredits: true
+        });
+      }
+
+      res.json({ 
+        success: true, 
+        unlocked: result.unlocked,
+        newFreeBalance: result.newFreeBalance,
+        newPaidBalance: result.newPaidBalance,
+        totalBalance: result.totalBalance
+      });
+    } catch (error) {
+      console.error("Unlock results error:", error);
+      res.status(500).json({ error: "Failed to unlock results" });
     }
   });
 
@@ -734,10 +777,46 @@ export async function registerRoutes(
 
       const questions = await storage.getQuestionsBySessionId(sessionId);
       
+      if (!evaluation.resultsUnlocked) {
+        const unlockCost = await creditService.getFeatureCost(FEATURE_KEYS.UNLOCK_RESULTS) ?? 15;
+        
+        const questionsWithoutAnswers = questions.map(q => ({
+          ...q,
+          modelAnswer: null,
+          answerExplanation: null
+        }));
+        
+        return res.json({ 
+          session: { ...session, questions: questionsWithoutAnswers }, 
+          evaluation: {
+            id: evaluation.id,
+            sessionId: evaluation.sessionId,
+            overallScore: null,
+            communicationScore: null,
+            confidenceScore: null,
+            relevanceScore: null,
+            structureScore: null,
+            topMistakes: null,
+            topImprovements: null,
+            focusPoint: null,
+            detailedFeedback: null,
+            resultsUnlocked: false,
+            createdAt: evaluation.createdAt
+          },
+          comparison: null,
+          paywall: {
+            locked: true,
+            message: "Your interview analysis is ready. Unlock your results by purchasing credits.",
+            unlockCost,
+            requiresPaidCredits: true
+          }
+        });
+      }
+
       const previousEvaluation = await storage.getPreviousEvaluation(sessionId, userId, session.interviewType);
       
       let comparison = null;
-      if (previousEvaluation) {
+      if (previousEvaluation && previousEvaluation.resultsUnlocked) {
         comparison = {
           previousOverall: previousEvaluation.overallScore,
           previousCommunication: previousEvaluation.communicationScore,
@@ -752,7 +831,7 @@ export async function registerRoutes(
         };
       }
       
-      res.json({ session: { ...session, questions }, evaluation, comparison });
+      res.json({ session: { ...session, questions }, evaluation, comparison, paywall: null });
     } catch (error) {
       console.error("Get evaluation error:", error);
       res.status(500).json({ error: "Failed to get evaluation" });

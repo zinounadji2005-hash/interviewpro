@@ -23,9 +23,9 @@ import { eq, desc, and, count } from "drizzle-orm";
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserCount(): Promise<number>;
-  getUserCredits(userId: string): Promise<number>;
+  getUserCredits(userId: string): Promise<{ freeCredits: number; paidCredits: number; totalCredits: number }>;
   deductCredits(userId: string, amount: number): Promise<boolean>;
-  addCredits(userId: string, amount: number): Promise<boolean>;
+  addCredits(userId: string, amount: number, creditType?: 'free' | 'paid'): Promise<boolean>;
   
   getCvsByUserId(userId: string): Promise<CV[]>;
   getCv(id: number): Promise<CV | undefined>;
@@ -69,28 +69,51 @@ export class DatabaseStorage implements IStorage {
     return result?.count ?? 0;
   }
 
-  async getUserCredits(userId: string): Promise<number> {
-    const [user] = await db.select({ credits: users.credits }).from(users).where(eq(users.id, userId));
-    return user?.credits ?? 0;
+  async getUserCredits(userId: string): Promise<{ freeCredits: number; paidCredits: number; totalCredits: number }> {
+    const [user] = await db.select({ freeCredits: users.freeCredits, paidCredits: users.paidCredits }).from(users).where(eq(users.id, userId));
+    const freeCredits = user?.freeCredits ?? 0;
+    const paidCredits = user?.paidCredits ?? 0;
+    return { freeCredits, paidCredits, totalCredits: freeCredits + paidCredits };
   }
 
   async deductCredits(userId: string, amount: number): Promise<boolean> {
-    const currentCredits = await this.getUserCredits(userId);
-    if (currentCredits < amount) {
+    const { freeCredits, paidCredits } = await this.getUserCredits(userId);
+    const totalCredits = freeCredits + paidCredits;
+    if (totalCredits < amount) {
       return false;
     }
+    
+    let newFreeCredits = freeCredits;
+    let newPaidCredits = paidCredits;
+    let remaining = amount;
+    
+    if (freeCredits >= remaining) {
+      newFreeCredits -= remaining;
+    } else {
+      remaining -= freeCredits;
+      newFreeCredits = 0;
+      newPaidCredits -= remaining;
+    }
+    
     await db.update(users)
-      .set({ credits: currentCredits - amount, updatedAt: new Date() })
+      .set({ freeCredits: newFreeCredits, paidCredits: newPaidCredits, updatedAt: new Date() })
       .where(eq(users.id, userId));
     return true;
   }
 
-  async addCredits(userId: string, amount: number): Promise<boolean> {
+  async addCredits(userId: string, amount: number, creditType: 'free' | 'paid' = 'paid'): Promise<boolean> {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     if (!user) return false;
-    await db.update(users)
-      .set({ credits: (user.credits || 0) + amount, updatedAt: new Date() })
-      .where(eq(users.id, userId));
+    
+    if (creditType === 'free') {
+      await db.update(users)
+        .set({ freeCredits: (user.freeCredits || 0) + amount, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+    } else {
+      await db.update(users)
+        .set({ paidCredits: (user.paidCredits || 0) + amount, updatedAt: new Date() })
+        .where(eq(users.id, userId));
+    }
     return true;
   }
 

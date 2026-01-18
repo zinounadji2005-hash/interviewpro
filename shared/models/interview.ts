@@ -1,4 +1,4 @@
-import { pgTable, serial, integer, text, timestamp, jsonb, varchar } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, jsonb, varchar, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql, relations } from "drizzle-orm";
@@ -77,6 +77,7 @@ export const evaluations = pgTable("evaluations", {
   topImprovements: jsonb("top_improvements"),
   focusPoint: text("focus_point"),
   detailedFeedback: jsonb("detailed_feedback"),
+  resultsUnlocked: boolean("results_unlocked").notNull().default(false),
   createdAt: timestamp("created_at").default(sql`CURRENT_TIMESTAMP`).notNull(),
 });
 
