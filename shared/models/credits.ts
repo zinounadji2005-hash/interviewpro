@@ -36,6 +36,7 @@ export const creditTransactions = pgTable("credit_transactions", {
   balanceAfter: integer("balance_after").notNull(),
   transactionType: varchar("transaction_type", { length: 50 }).notNull(),
   source: varchar("source", { length: 100 }).notNull(),
+  creditType: varchar("credit_type", { length: 20 }).notNull().default("paid"),
   featureKey: varchar("feature_key", { length: 100 }),
   packageId: integer("package_id").references(() => creditPackages.id, { onDelete: "set null" }),
   referenceId: varchar("reference_id", { length: 255 }),
@@ -91,4 +92,10 @@ export const FEATURE_KEYS = {
   START_INTERVIEW: "start_interview",
   VOICE_INTERVIEW: "voice_interview",
   INTERVIEW_EVALUATION: "interview_evaluation",
+  UNLOCK_RESULTS: "unlock_results",
+} as const;
+
+export const CREDIT_TYPES = {
+  FREE: "free",
+  PAID: "paid",
 } as const;

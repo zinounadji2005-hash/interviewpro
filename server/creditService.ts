@@ -4,8 +4,11 @@ import {
   featureCosts, 
   creditTransactions, 
   creditPackages,
+  evaluations,
   TRANSACTION_TYPES,
   TRANSACTION_SOURCES,
+  CREDIT_TYPES,
+  FEATURE_KEYS,
   type FeatureCost,
   type CreditPackage,
   type CreditTransaction
@@ -14,15 +17,24 @@ import { eq, and, desc, sql } from "drizzle-orm";
 
 export interface CreditOperationResult {
   success: boolean;
-  newBalance?: number;
+  newFreeBalance?: number;
+  newPaidBalance?: number;
+  totalBalance?: number;
   transactionId?: number;
   error?: string;
+}
+
+export interface UserBalance {
+  freeCredits: number;
+  paidCredits: number;
+  totalCredits: number;
 }
 
 export interface GrantCreditsParams {
   userId: string;
   amount: number;
   source: string;
+  creditType?: string;
   transactionType?: string;
   packageId?: number;
   referenceId?: string;
@@ -35,6 +47,7 @@ export interface DeductCreditsParams {
   featureKey: string;
   referenceId?: string;
   metadata?: string;
+  requirePaidCredits?: boolean;
 }
 
 class CreditService {
@@ -73,24 +86,36 @@ class CreditService {
     return pkg ?? null;
   }
 
-  async getUserBalance(userId: string): Promise<number> {
+  async getUserBalance(userId: string): Promise<UserBalance> {
     const [user] = await db
-      .select({ credits: users.credits })
+      .select({ freeCredits: users.freeCredits, paidCredits: users.paidCredits })
       .from(users)
       .where(eq(users.id, userId))
       .limit(1);
     
-    return user?.credits ?? 0;
+    const freeCredits = user?.freeCredits ?? 0;
+    const paidCredits = user?.paidCredits ?? 0;
+    
+    return {
+      freeCredits,
+      paidCredits,
+      totalCredits: freeCredits + paidCredits
+    };
   }
 
-  async hasEnoughCredits(userId: string, featureKey: string): Promise<boolean> {
+  async hasEnoughCredits(userId: string, featureKey: string, requirePaid: boolean = false): Promise<boolean> {
     const cost = await this.getFeatureCost(featureKey);
     if (cost === null) {
       return false;
     }
     
     const balance = await this.getUserBalance(userId);
-    return balance >= cost;
+    
+    if (requirePaid) {
+      return balance.paidCredits >= cost;
+    }
+    
+    return balance.totalCredits >= cost;
   }
 
   async checkIdempotencyKey(idempotencyKey: string): Promise<CreditTransaction | null> {
@@ -110,6 +135,7 @@ class CreditService {
       userId, 
       amount, 
       source, 
+      creditType = CREDIT_TYPES.PAID,
       transactionType = TRANSACTION_TYPES.PURCHASE,
       packageId,
       referenceId,
@@ -124,9 +150,12 @@ class CreditService {
     if (idempotencyKey) {
       const existing = await this.checkIdempotencyKey(idempotencyKey);
       if (existing) {
+        const balance = await this.getUserBalance(userId);
         return { 
           success: true, 
-          newBalance: existing.balanceAfter, 
+          newFreeBalance: balance.freeCredits,
+          newPaidBalance: balance.paidCredits,
+          totalBalance: balance.totalCredits,
           transactionId: existing.id,
           error: "Idempotent request - transaction already processed"
         };
@@ -136,7 +165,7 @@ class CreditService {
     try {
       const result = await db.transaction(async (tx) => {
         const [user] = await tx
-          .select({ credits: users.credits })
+          .select({ freeCredits: users.freeCredits, paidCredits: users.paidCredits })
           .from(users)
           .where(eq(users.id, userId))
           .limit(1);
@@ -145,12 +174,20 @@ class CreditService {
           throw new Error("User not found");
         }
 
-        const newBalance = user.credits + amount;
+        let newFreeBalance = user.freeCredits;
+        let newPaidBalance = user.paidCredits;
+
+        if (creditType === CREDIT_TYPES.FREE) {
+          newFreeBalance += amount;
+        } else {
+          newPaidBalance += amount;
+        }
 
         await tx
           .update(users)
           .set({ 
-            credits: newBalance,
+            freeCredits: newFreeBalance,
+            paidCredits: newPaidBalance,
             updatedAt: new Date()
           })
           .where(eq(users.id, userId));
@@ -160,9 +197,10 @@ class CreditService {
           .values({
             userId,
             amount,
-            balanceAfter: newBalance,
+            balanceAfter: newFreeBalance + newPaidBalance,
             transactionType,
             source,
+            creditType,
             packageId,
             referenceId,
             idempotencyKey,
@@ -170,7 +208,12 @@ class CreditService {
           })
           .returning();
 
-        return { newBalance, transactionId: transaction.id };
+        return { 
+          newFreeBalance, 
+          newPaidBalance, 
+          totalBalance: newFreeBalance + newPaidBalance,
+          transactionId: transaction.id 
+        };
       });
 
       return { success: true, ...result };
@@ -178,9 +221,12 @@ class CreditService {
       if (error.message?.includes("unique_idempotency_key")) {
         const existing = await this.checkIdempotencyKey(idempotencyKey!);
         if (existing) {
+          const balance = await this.getUserBalance(userId);
           return { 
             success: true, 
-            newBalance: existing.balanceAfter, 
+            newFreeBalance: balance.freeCredits,
+            newPaidBalance: balance.paidCredits,
+            totalBalance: balance.totalCredits,
             transactionId: existing.id,
             error: "Idempotent request - transaction already processed"
           };
@@ -191,7 +237,7 @@ class CreditService {
   }
 
   async deductCredits(params: DeductCreditsParams): Promise<CreditOperationResult> {
-    const { userId, featureKey, referenceId, metadata } = params;
+    const { userId, featureKey, referenceId, metadata, requirePaidCredits = false } = params;
 
     const cost = await this.getFeatureCost(featureKey);
     if (cost === null) {
@@ -200,13 +246,18 @@ class CreditService {
 
     if (cost === 0) {
       const balance = await this.getUserBalance(userId);
-      return { success: true, newBalance: balance };
+      return { 
+        success: true, 
+        newFreeBalance: balance.freeCredits,
+        newPaidBalance: balance.paidCredits,
+        totalBalance: balance.totalCredits
+      };
     }
 
     try {
       const result = await db.transaction(async (tx) => {
         const [user] = await tx
-          .select({ credits: users.credits })
+          .select({ freeCredits: users.freeCredits, paidCredits: users.paidCredits })
           .from(users)
           .where(eq(users.id, userId))
           .limit(1);
@@ -215,16 +266,38 @@ class CreditService {
           throw new Error("User not found");
         }
 
-        if (user.credits < cost) {
-          throw new Error(`Insufficient credits. Required: ${cost}, Available: ${user.credits}`);
-        }
+        let newFreeBalance = user.freeCredits;
+        let newPaidBalance = user.paidCredits;
+        let creditTypeUsed = CREDIT_TYPES.FREE;
+        let remaining = cost;
 
-        const newBalance = user.credits - cost;
+        if (requirePaidCredits) {
+          if (user.paidCredits < cost) {
+            throw new Error(`Insufficient paid credits. Required: ${cost}, Available: ${user.paidCredits}. Purchase more credits to unlock results.`);
+          }
+          newPaidBalance -= cost;
+          creditTypeUsed = CREDIT_TYPES.PAID;
+        } else {
+          if (user.freeCredits + user.paidCredits < cost) {
+            throw new Error(`Insufficient credits. Required: ${cost}, Available: ${user.freeCredits + user.paidCredits}`);
+          }
+
+          if (user.freeCredits >= remaining) {
+            newFreeBalance -= remaining;
+            creditTypeUsed = CREDIT_TYPES.FREE;
+          } else {
+            remaining -= user.freeCredits;
+            newFreeBalance = 0;
+            newPaidBalance -= remaining;
+            creditTypeUsed = user.freeCredits > 0 ? "mixed" : CREDIT_TYPES.PAID;
+          }
+        }
 
         await tx
           .update(users)
           .set({ 
-            credits: newBalance,
+            freeCredits: newFreeBalance,
+            paidCredits: newPaidBalance,
             updatedAt: new Date()
           })
           .where(eq(users.id, userId));
@@ -234,21 +307,122 @@ class CreditService {
           .values({
             userId,
             amount: -cost,
-            balanceAfter: newBalance,
+            balanceAfter: newFreeBalance + newPaidBalance,
             transactionType: TRANSACTION_TYPES.USAGE,
             source: TRANSACTION_SOURCES.FEATURE_USE,
+            creditType: creditTypeUsed,
             featureKey,
             referenceId,
             metadata
           })
           .returning();
 
-        return { newBalance, transactionId: transaction.id };
+        return { 
+          newFreeBalance, 
+          newPaidBalance, 
+          totalBalance: newFreeBalance + newPaidBalance,
+          transactionId: transaction.id 
+        };
       });
 
       return { success: true, ...result };
     } catch (error: any) {
       return { success: false, error: error.message || "Failed to deduct credits" };
+    }
+  }
+
+  async unlockResults(userId: string, evaluationId: number): Promise<CreditOperationResult & { unlocked?: boolean }> {
+    const [evaluation] = await db
+      .select()
+      .from(evaluations)
+      .where(eq(evaluations.id, evaluationId))
+      .limit(1);
+
+    if (!evaluation) {
+      return { success: false, error: "Evaluation not found" };
+    }
+
+    if (evaluation.resultsUnlocked) {
+      const balance = await this.getUserBalance(userId);
+      return { 
+        success: true, 
+        unlocked: true, 
+        newFreeBalance: balance.freeCredits,
+        newPaidBalance: balance.paidCredits,
+        totalBalance: balance.totalCredits,
+        error: "Results already unlocked" 
+      };
+    }
+
+    const unlockCost = await this.getFeatureCost(FEATURE_KEYS.UNLOCK_RESULTS) ?? 15;
+
+    const balance = await this.getUserBalance(userId);
+    if (balance.paidCredits < unlockCost) {
+      return { 
+        success: false, 
+        error: `Insufficient paid credits. Required: ${unlockCost}, Available: ${balance.paidCredits}. Purchase more credits to unlock your interview results.` 
+      };
+    }
+
+    try {
+      const result = await db.transaction(async (tx) => {
+        const [user] = await tx
+          .select({ freeCredits: users.freeCredits, paidCredits: users.paidCredits })
+          .from(users)
+          .where(eq(users.id, userId))
+          .limit(1);
+
+        if (!user) {
+          throw new Error("User not found");
+        }
+
+        if (user.paidCredits < unlockCost) {
+          throw new Error(`Insufficient paid credits. Required: ${unlockCost}, Available: ${user.paidCredits}`);
+        }
+
+        const newPaidBalance = user.paidCredits - unlockCost;
+        const newFreeBalance = user.freeCredits;
+
+        await tx
+          .update(users)
+          .set({ 
+            paidCredits: newPaidBalance,
+            updatedAt: new Date()
+          })
+          .where(eq(users.id, userId));
+
+        await tx
+          .update(evaluations)
+          .set({ resultsUnlocked: true })
+          .where(eq(evaluations.id, evaluationId));
+
+        const [transaction] = await tx
+          .insert(creditTransactions)
+          .values({
+            userId,
+            amount: -unlockCost,
+            balanceAfter: newFreeBalance + newPaidBalance,
+            transactionType: TRANSACTION_TYPES.USAGE,
+            source: TRANSACTION_SOURCES.FEATURE_USE,
+            creditType: CREDIT_TYPES.PAID,
+            featureKey: FEATURE_KEYS.UNLOCK_RESULTS,
+            referenceId: `evaluation:${evaluationId}`,
+            metadata: JSON.stringify({ evaluationId })
+          })
+          .returning();
+
+        return { 
+          newFreeBalance, 
+          newPaidBalance, 
+          totalBalance: newFreeBalance + newPaidBalance,
+          transactionId: transaction.id,
+          unlocked: true
+        };
+      });
+
+      return { success: true, ...result };
+    } catch (error: any) {
+      return { success: false, error: error.message || "Failed to unlock results" };
     }
   }
 
@@ -269,8 +443,20 @@ class CreditService {
   }): Promise<CreditOperationResult> {
     return this.grantCredits({
       ...params,
+      creditType: CREDIT_TYPES.PAID,
       source: TRANSACTION_SOURCES.REFUND,
       transactionType: TRANSACTION_TYPES.REFUND
+    });
+  }
+
+  async grantSignupBonus(userId: string): Promise<CreditOperationResult> {
+    return this.grantCredits({
+      userId,
+      amount: 30,
+      source: TRANSACTION_SOURCES.SIGNUP_BONUS,
+      creditType: CREDIT_TYPES.FREE,
+      transactionType: TRANSACTION_TYPES.BONUS,
+      idempotencyKey: `signup_bonus:${userId}`
     });
   }
 }
