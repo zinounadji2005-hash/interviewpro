@@ -4,7 +4,7 @@ import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
 
-["DATABASE_URL", "SESSION_SECRET", "SUPABASE_URL", "SUPABASE_ANON_KEY", "GEMINI_API_KEY"].forEach((key) => {
+["SUPABASE_ACCESS_TOKEN", "SESSION_SECRET", "SUPABASE_URL", "SUPABASE_ANON_KEY", "GEMINI_API_KEY"].forEach((key) => {
   if (!process.env[key] || process.env[key]!.includes("YOUR_")) {
     throw new Error(`Missing required environment variable: ${key}. Check .env file.`);
   }
@@ -85,14 +85,7 @@ app.use((req, res, next) => {
   }
 
   const port = parseInt(process.env.PORT || "5000", 10);
-  httpServer.listen(
-    {
-      port,
-      host: "0.0.0.0",
-      reusePort: true,
-    },
-    () => {
-      log(`serving on port ${port}`);
-    },
-  );
+  httpServer.listen(port, "127.0.0.1", () => {
+    log(`serving on port ${port}`);
+  });
 })();
