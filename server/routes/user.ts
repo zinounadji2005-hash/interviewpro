@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { storage } from "../storage";
-import { isAuthenticated, syncUsersFromSupabase } from "../supabase-auth";
+import { isAuthenticated, syncUsersFromSupabase, getUserId } from "../supabase-auth";
 
 const router = Router();
 
@@ -37,7 +37,7 @@ router.post("/admin/sync-users", async (req, res) => {
 // Dashboard data
 router.get("/dashboard", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const [cvs, sessions, latestEvaluation, creditBalance, readinessScore] = await Promise.all([
@@ -60,6 +60,29 @@ router.get("/dashboard", isAuthenticated, async (req, res) => {
     } catch (error) {
         console.error("Dashboard error:", error);
         res.status(500).json({ error: "Failed to load dashboard" });
+    }
+});
+
+// User progress data
+router.get("/progress", isAuthenticated, async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+        const [evaluationsWithSessions, patterns, comparison] = await Promise.all([
+            storage.getSessionsWithEvaluations(userId),
+            storage.getWeaknessPatternsByUserId(userId),
+            storage.getComparisonData(userId),
+        ]);
+
+        const evaluations = evaluationsWithSessions
+            .filter(s => s.evaluation)
+            .map(s => ({ ...s.evaluation!, session: s }));
+
+        res.json({ evaluations, patterns, comparison });
+    } catch (error) {
+        console.error("Get progress error:", error);
+        res.status(500).json({ error: "Failed to get progress" });
     }
 });
 

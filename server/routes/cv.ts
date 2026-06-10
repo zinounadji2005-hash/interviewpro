@@ -5,15 +5,14 @@ import { optimizeCV } from "../ai";
 import { validateCVName } from "../nameValidation";
 import { creditService } from "../creditService";
 import { FEATURE_KEYS } from "@shared/schema";
-import { isAuthenticated } from "../supabase-auth";
+import { isAuthenticated, getUserId } from "../supabase-auth";
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
-// Get all CVs for the authenticated user
-router.get("/", isAuthenticated, async (req, res) => {
+router.get("/cvs", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const cvs = await storage.getCvsByUserId(userId);
@@ -24,10 +23,9 @@ router.get("/", isAuthenticated, async (req, res) => {
     }
 });
 
-// Upload a new CV
-router.post("/upload", isAuthenticated, upload.single("cv"), async (req, res) => {
+router.post("/cvs/upload", isAuthenticated, upload.single("cv"), async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const file = req.file;
@@ -80,10 +78,9 @@ router.post("/upload", isAuthenticated, upload.single("cv"), async (req, res) =>
     }
 });
 
-// Optimize a CV
-router.post("/:id/optimize", isAuthenticated, async (req, res) => {
+router.post("/cvs/:id/optimize", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const cvId = parseInt(req.params.id);
@@ -119,10 +116,9 @@ router.post("/:id/optimize", isAuthenticated, async (req, res) => {
     }
 });
 
-// Confirm CV ownership
-router.post("/:id/confirm", isAuthenticated, async (req, res) => {
+router.post("/cvs/:id/confirm", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const cvId = parseInt(req.params.id);

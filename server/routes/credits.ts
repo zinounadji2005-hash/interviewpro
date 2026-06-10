@@ -1,14 +1,14 @@
 import { Router } from "express";
 import { storage } from "../storage";
 import { creditService } from "../creditService";
-import { isAuthenticated } from "../supabase-auth";
+import { isAuthenticated, getUserId } from "../supabase-auth";
 
 const router = Router();
 
 // Get user credits
-router.get("/", isAuthenticated, async (req, res) => {
+router.get("/credits", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const creditBalance = await storage.getUserCredits(userId);
@@ -20,7 +20,7 @@ router.get("/", isAuthenticated, async (req, res) => {
 });
 
 // Get credit packages
-router.get("/packages", async (req, res) => {
+router.get("/credit-packages", async (req, res) => {
     try {
         const packages = await creditService.getActivePackages();
         res.json(packages);
@@ -42,9 +42,9 @@ router.get("/feature-costs", async (req, res) => {
 });
 
 // Get credit history
-router.get("/history", isAuthenticated, async (req, res) => {
+router.get("/credit-history", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const limit = parseInt(req.query.limit as string) || 50;
@@ -57,9 +57,9 @@ router.get("/history", isAuthenticated, async (req, res) => {
 });
 
 // Grant credits (Admin/Webhook)
-router.post("/grant", isAuthenticated, async (req, res) => {
+router.post("/credits/grant", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const { amount, source, transactionType, packageId, referenceId, idempotencyKey, metadata } = req.body;

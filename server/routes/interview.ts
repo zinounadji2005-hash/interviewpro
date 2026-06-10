@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { storage } from "../storage";
 import { creditService } from "../creditService";
-import { isAuthenticated } from "../supabase-auth";
+import { isAuthenticated, getUserId } from "../supabase-auth";
 import {
     generateInterviewQuestions,
     evaluateAnswer,
@@ -29,10 +29,9 @@ import type { InterviewMemory } from "@shared/models/interview";
 const router = Router();
 const voiceInterviewSessions = new Map<string, { state: VoiceInterviewState; cvText: string; interviewType: string; targetRole?: string; dbSessionId: number }>();
 
-// Get all interviews
-router.get("/", isAuthenticated, async (req, res) => {
+router.get("/interviews", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const sessions = await storage.getInterviewsByUserId(userId);
@@ -43,10 +42,9 @@ router.get("/", isAuthenticated, async (req, res) => {
     }
 });
 
-// Get interview history with evaluations
-router.get("/history", isAuthenticated, async (req, res) => {
+router.get("/interviews/history", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const sessionsWithEvals = await storage.getSessionsWithEvaluations(userId);
@@ -57,10 +55,9 @@ router.get("/history", isAuthenticated, async (req, res) => {
     }
 });
 
-// Get specific interview
-router.get("/:id", isAuthenticated, async (req, res) => {
+router.get("/interviews/:id", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const sessionId = parseInt(req.params.id);
@@ -77,10 +74,9 @@ router.get("/:id", isAuthenticated, async (req, res) => {
     }
 });
 
-// Create new standard interview
-router.post("/", isAuthenticated, async (req, res) => {
+router.post("/interviews", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const deductResult = await creditService.deductCredits({
@@ -136,10 +132,9 @@ router.post("/", isAuthenticated, async (req, res) => {
     }
 });
 
-// Create adaptive interview
-router.post("/adaptive", isAuthenticated, async (req, res) => {
+router.post("/interviews/adaptive", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const deductResult = await creditService.deductCredits({
@@ -203,10 +198,9 @@ router.post("/adaptive", isAuthenticated, async (req, res) => {
     }
 });
 
-// Submit answer for adaptive interview
-router.post("/:id/adaptive-answer", isAuthenticated, async (req, res) => {
+router.post("/interviews/:id/adaptive-answer", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const sessionId = parseInt(req.params.id);
@@ -311,10 +305,9 @@ router.post("/:id/adaptive-answer", isAuthenticated, async (req, res) => {
     }
 });
 
-// Submit answer for standard interview
-router.post("/:id/answer", isAuthenticated, async (req, res) => {
+router.post("/interviews/:id/answer", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const sessionId = parseInt(req.params.id);
@@ -343,10 +336,9 @@ router.post("/:id/answer", isAuthenticated, async (req, res) => {
     }
 });
 
-// Finish interview and evaluate
-router.post("/:id/finish", isAuthenticated, async (req, res) => {
+router.post("/interviews/:id/finish", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const sessionId = parseInt(req.params.id);
@@ -440,9 +432,9 @@ router.post("/:id/finish", isAuthenticated, async (req, res) => {
 
 // Voice Interview Routes
 
-router.post("/voice/start", isAuthenticated, async (req, res) => {
+router.post("/voice-interview/start", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const { cvId, interviewType, targetRole } = req.body;
@@ -529,9 +521,9 @@ router.post("/voice/start", isAuthenticated, async (req, res) => {
     }
 });
 
-router.post("/voice/answer", isAuthenticated, async (req, res) => {
+router.post("/voice-interview/answer", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const { sessionKey, audio, audioFormat = "webm" } = req.body;
@@ -652,9 +644,9 @@ router.post("/voice/answer", isAuthenticated, async (req, res) => {
     }
 });
 
-router.post("/voice/end", isAuthenticated, async (req, res) => {
+router.post("/voice-interview/end", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const { sessionKey } = req.body;
@@ -732,6 +724,86 @@ router.post("/voice/end", isAuthenticated, async (req, res) => {
     }
 });
 
+// Get evaluation for a session
+router.get("/evaluations/:id", isAuthenticated, async (req, res) => {
+    try {
+        const userId = getUserId(req);
+        if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+        const sessionId = parseInt(req.params.id);
+        const session = await storage.getInterviewSession(sessionId);
+        if (!session || session.userId !== userId) {
+            return res.status(404).json({ error: "Session not found" });
+        }
+
+        const evaluation = await storage.getEvaluationBySessionId(sessionId);
+        if (!evaluation) {
+            return res.status(404).json({ error: "Evaluation not found" });
+        }
+
+        const questions = await storage.getQuestionsBySessionId(sessionId);
+
+        if (!evaluation.resultsUnlocked) {
+            const unlockCost = await creditService.getFeatureCost(FEATURE_KEYS.UNLOCK_RESULTS) ?? 15;
+
+            const questionsWithoutAnswers = questions.map(q => ({
+                ...q,
+                modelAnswer: null,
+                answerExplanation: null
+            }));
+
+            return res.json({
+                session: { ...session, questions: questionsWithoutAnswers },
+                evaluation: {
+                    id: evaluation.id,
+                    sessionId: evaluation.sessionId,
+                    overallScore: null,
+                    communicationScore: null,
+                    confidenceScore: null,
+                    relevanceScore: null,
+                    structureScore: null,
+                    topMistakes: null,
+                    topImprovements: null,
+                    focusPoint: null,
+                    detailedFeedback: null,
+                    resultsUnlocked: false,
+                    createdAt: evaluation.createdAt
+                },
+                comparison: null,
+                paywall: {
+                    locked: true,
+                    message: "Your interview analysis is ready. Unlock your results by purchasing credits.",
+                    unlockCost,
+                    requiresPaidCredits: true
+                }
+            });
+        }
+
+        const previousEvaluation = await storage.getPreviousEvaluation(sessionId, userId, session.interviewType);
+
+        let comparison = null;
+        if (previousEvaluation && previousEvaluation.resultsUnlocked) {
+            comparison = {
+                previousOverall: previousEvaluation.overallScore,
+                previousCommunication: previousEvaluation.communicationScore,
+                previousConfidence: previousEvaluation.confidenceScore,
+                previousRelevance: previousEvaluation.relevanceScore,
+                previousStructure: previousEvaluation.structureScore,
+                overallChange: evaluation.overallScore - previousEvaluation.overallScore,
+                communicationChange: evaluation.communicationScore - previousEvaluation.communicationScore,
+                confidenceChange: evaluation.confidenceScore - previousEvaluation.confidenceScore,
+                relevanceChange: evaluation.relevanceScore - previousEvaluation.relevanceScore,
+                structureChange: evaluation.structureScore - previousEvaluation.structureScore,
+            };
+        }
+
+        res.json({ session: { ...session, questions }, evaluation, comparison, paywall: null });
+    } catch (error) {
+        console.error("Get evaluation error:", error);
+        res.status(500).json({ error: "Failed to get evaluation" });
+    }
+});
+
 // Text to speech standalone endpoint
 router.post("/text-to-speech", isAuthenticated, async (req, res) => {
     try {
@@ -751,7 +823,7 @@ router.post("/text-to-speech", isAuthenticated, async (req, res) => {
 // Evaluation access
 router.post("/evaluations/:id/unlock", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
+        const userId = getUserId(req);
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const evaluationId = parseInt(req.params.id);

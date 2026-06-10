@@ -24,29 +24,27 @@ export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
   getUserCount(): Promise<number>;
   getUserCredits(userId: string): Promise<{ freeCredits: number; paidCredits: number; totalCredits: number }>;
-  deductCredits(userId: string, amount: number): Promise<boolean>;
-  addCredits(userId: string, amount: number, creditType?: 'free' | 'paid'): Promise<boolean>;
-  
+
   getCvsByUserId(userId: string): Promise<CV[]>;
   getCv(id: number): Promise<CV | undefined>;
   createCv(cv: InsertCV): Promise<CV>;
   updateCv(id: number, data: Partial<InsertCV>): Promise<CV | undefined>;
-  
+
   getInterviewsByUserId(userId: string): Promise<InterviewSession[]>;
   getInterviewSession(id: number): Promise<InterviewSession | undefined>;
   createInterviewSession(session: InsertInterviewSession): Promise<InterviewSession>;
   updateInterviewSession(id: number, data: Partial<InterviewSession>): Promise<InterviewSession | undefined>;
-  
+
   getQuestionsBySessionId(sessionId: number): Promise<InterviewQuestion[]>;
   createInterviewQuestion(question: InsertInterviewQuestion): Promise<InterviewQuestion>;
   updateInterviewQuestion(id: number, data: Partial<InterviewQuestion>): Promise<InterviewQuestion | undefined>;
-  
+
   getEvaluationBySessionId(sessionId: number): Promise<Evaluation | undefined>;
   createEvaluation(evaluation: InsertEvaluation): Promise<Evaluation>;
-  
+
   getWeaknessPatternsByUserId(userId: string): Promise<WeaknessPattern[]>;
   createOrUpdateWeaknessPattern(pattern: InsertWeaknessPattern): Promise<WeaknessPattern>;
-  
+
   getSessionsWithEvaluations(userId: string): Promise<(InterviewSession & { evaluation: Evaluation | null })[]>;
   getLatestEvaluationByUserId(userId: string): Promise<Evaluation | null>;
   getComparisonData(userId: string): Promise<{ round1: Evaluation | null; round2: Evaluation | null } | null>;
@@ -74,47 +72,6 @@ export class DatabaseStorage implements IStorage {
     const freeCredits = user?.freeCredits ?? 0;
     const paidCredits = user?.paidCredits ?? 0;
     return { freeCredits, paidCredits, totalCredits: freeCredits + paidCredits };
-  }
-
-  async deductCredits(userId: string, amount: number): Promise<boolean> {
-    const { freeCredits, paidCredits } = await this.getUserCredits(userId);
-    const totalCredits = freeCredits + paidCredits;
-    if (totalCredits < amount) {
-      return false;
-    }
-    
-    let newFreeCredits = freeCredits;
-    let newPaidCredits = paidCredits;
-    let remaining = amount;
-    
-    if (freeCredits >= remaining) {
-      newFreeCredits -= remaining;
-    } else {
-      remaining -= freeCredits;
-      newFreeCredits = 0;
-      newPaidCredits -= remaining;
-    }
-    
-    await db.update(users)
-      .set({ freeCredits: newFreeCredits, paidCredits: newPaidCredits, updatedAt: new Date() })
-      .where(eq(users.id, userId));
-    return true;
-  }
-
-  async addCredits(userId: string, amount: number, creditType: 'free' | 'paid' = 'paid'): Promise<boolean> {
-    const [user] = await db.select().from(users).where(eq(users.id, userId));
-    if (!user) return false;
-    
-    if (creditType === 'free') {
-      await db.update(users)
-        .set({ freeCredits: (user.freeCredits || 0) + amount, updatedAt: new Date() })
-        .where(eq(users.id, userId));
-    } else {
-      await db.update(users)
-        .set({ paidCredits: (user.paidCredits || 0) + amount, updatedAt: new Date() })
-        .where(eq(users.id, userId));
-    }
-    return true;
   }
 
   async getCvsByUserId(userId: string): Promise<CV[]> {

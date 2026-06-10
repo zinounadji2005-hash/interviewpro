@@ -250,6 +250,10 @@ export const isAuthenticated: RequestHandler = async (req, res, next) => {
   next();
 };
 
+export function getUserId(req: any): string | null {
+  return (req as any).user?.claims?.sub || (req.session as any)?.userId || null;
+}
+
 // Admin function to sync all users from Supabase Auth to local database
 export async function syncUsersFromSupabase(): Promise<{ synced: number; errors: string[] }> {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
