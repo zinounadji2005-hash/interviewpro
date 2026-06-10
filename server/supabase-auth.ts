@@ -12,18 +12,9 @@ const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || "";
 let supabase: SupabaseClient | null = null;
 
 function getBaseUrl(req?: { protocol: string; get: (name: string) => string | undefined }): string {
-  // In production, use REPLIT_DOMAINS or REPLIT_DEV_DOMAIN
-  const replitDomains = process.env.REPLIT_DOMAINS;
-  const replitDevDomain = process.env.REPLIT_DEV_DOMAIN;
-  
-  if (replitDomains) {
-    // REPLIT_DOMAINS contains comma-separated list, use first one
-    const primaryDomain = replitDomains.split(",")[0].trim();
-    return `https://${primaryDomain}`;
-  }
-  
-  if (replitDevDomain) {
-    return `https://${replitDevDomain}`;
+  // Use BASE_URL environment variable if set
+  if (process.env.BASE_URL) {
+    return process.env.BASE_URL;
   }
   
   // Fallback to request host if available
@@ -35,7 +26,7 @@ function getBaseUrl(req?: { protocol: string; get: (name: string) => string | un
   }
   
   // Development fallback
-  return "http://localhost:5000";
+  return process.env.PORT ? `http://localhost:${process.env.PORT}` : "http://localhost:5000";
 }
 
 function getSupabase(): SupabaseClient {

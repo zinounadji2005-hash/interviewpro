@@ -1,11 +1,5 @@
-import OpenAI from "openai";
-import { speechToText, textToSpeech } from "./replit_integrations/audio/client";
-import type { InterviewMemory, AnswerAnalysis } from "@shared/models/interview";
-
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+import { speechToText, textToSpeech } from "./audio-groq";
+import type { InterviewMemory } from "@shared/models/interview";
 
 export interface VoiceInterviewPhase {
   name: "warmup" | "core" | "deepdive" | "closing";
@@ -157,14 +151,25 @@ ${cvText.substring(0, 2000)}`;
     messages.push({ role: "user", content: "Start the interview with an opening question." });
   }
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages,
-    max_tokens: 200,
-    temperature: 0.7,
+  // Use Gemini for question generation
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY must be set");
+  }
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.0-flash-exp",
+    systemInstruction: systemPrompt
   });
+  
+  const userMessage = conversationContext 
+    ? `Previous conversation:\n${conversationContext}\n\nGenerate the next interview question.`
+    : "Start the interview with an opening question.";
+  
+  const result = await model.generateContent(userMessage);
+  const response = await result.response;
 
-  const questionText = response.choices[0]?.message?.content?.trim() || "Could you tell me about your experience?";
+  const questionText = response.text().trim() || "Could you tell me about your experience?";
 
   state.questionNumber++;
   state.conversationHistory.push({ role: "interviewer", content: questionText });
@@ -205,15 +210,19 @@ Return JSON:
   "skillsMentioned": ["array"]
 }`;
 
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o",
-    messages: [
-      { role: "system", content: evaluationPrompt },
-      { role: "user", content: `Evaluate this answer: "${answerText}"` },
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 300,
+  // Use Gemini for evaluation
+  const { GoogleGenerativeAI } = await import("@google/generative-ai");
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY must be set");
+  }
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.0-flash-exp",
+    systemInstruction: evaluationPrompt + "\n\nAlways respond with valid JSON only, no markdown formatting."
   });
+  
+  const result = await model.generateContent(`Evaluate this answer: "${answerText}"`);
+  const response = await result.response;
 
   let evaluation = {
     communication: 70,
@@ -224,7 +233,8 @@ Return JSON:
   };
 
   try {
-    const parsed = JSON.parse(response.choices[0]?.message?.content || "{}");
+    const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const parsed = JSON.parse(text || "{}");
     evaluation = {
       communication: parsed.communication || 70,
       confidence: parsed.confidence || 70,

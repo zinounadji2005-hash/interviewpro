@@ -1,5 +1,44 @@
-// Re-export from Gemini implementation
-export * from "./ai-gemini";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import type { InterviewMemory, AnswerAnalysis } from "@shared/models/interview";
+
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY must be set in environment variables");
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const AI_MODEL = "gemini-2.0-flash-exp"; // Using latest Gemini model
+
+async function callGemini(prompt: string, systemInstruction?: string): Promise<string> {
+  const model = genAI.getGenerativeModel({ 
+    model: AI_MODEL,
+    systemInstruction: systemInstruction || "You are a helpful AI assistant."
+  });
+  
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text();
+}
+
+async function callGeminiJSON<T>(prompt: string, systemInstruction?: string): Promise<T> {
+  const model = genAI.getGenerativeModel({ 
+    model: AI_MODEL,
+    systemInstruction: systemInstruction || "You are a helpful AI assistant. Always respond with valid JSON only."
+  });
+  
+  const result = await model.generateContent(`${prompt}\n\nRespond with valid JSON only, no markdown formatting.`);
+  const response = await result.response;
+  const text = response.text();
+  
+  // Remove markdown code blocks if present
+  const cleaned = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+  
+  try {
+    return JSON.parse(cleaned) as T;
+  } catch (e) {
+    console.error("Failed to parse Gemini JSON response:", cleaned);
+    throw new Error("Invalid JSON response from Gemini");
+  }
+}
 
 export function createInitialMemory(): InterviewMemory {
   return {
@@ -43,18 +82,12 @@ Return a JSON object with:
     ? `Previous topics covered: ${memory.topicsCovered.join(", ")}\nSkills already discussed: ${memory.skillsDiscussed.join(", ")}`
     : "This is the first question.";
 
-  const response = await openai.chat.completions.create({
-    model: AI_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `${context}\n\nQuestion: ${question}\nAnswer: ${answer}` }
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 512,
-  });
+  const prompt = `${context}\n\nQuestion: ${question}\nAnswer: ${answer}`;
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
+  try {
+    return await callGeminiJSON<AnswerAnalysis>(prompt, systemPrompt);
+  } catch (error) {
+    console.error("Error analyzing answer:", error);
     return {
       mainTopic: "general",
       skillsMentioned: [],
@@ -64,7 +97,6 @@ Return a JSON object with:
       strategy: "clarify",
     };
   }
-  return JSON.parse(content);
 }
 
 export async function generateAdaptiveQuestion(
@@ -119,18 +151,13 @@ Return a JSON object with:
     ? `CV Summary:\n${cvText.slice(0, 1500)}\n\nRecent conversation:\n${conversationContext}\n\nGenerate the next question.`
     : `CV Summary:\n${cvText.slice(0, 1500)}\n\nGenerate the opening interview question.`;
 
-  const response = await openai.chat.completions.create({
-    model: AI_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userContent }
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 1024,
-  });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
+  try {
+    return await callGeminiJSON<{ questionText: string; modelAnswer: string; answerExplanation: string; intent: string }>(
+      userContent,
+      systemPrompt
+    );
+  } catch (error) {
+    console.error("Error generating adaptive question:", error);
     return {
       questionText: "Tell me about yourself and your background.",
       modelAnswer: "A concise summary highlighting relevant experience and skills.",
@@ -138,7 +165,6 @@ Return a JSON object with:
       intent: "experience",
     };
   }
-  return JSON.parse(content);
 }
 
 export function updateMemory(
@@ -205,25 +231,17 @@ Return a JSON object with:
 - improvedText: The fully optimized CV text
 - analysis: { improvements: string[] (list of key improvements made), atsScore: number (0-100 estimated ATS compatibility) }`;
 
-  const response = await openai.chat.completions.create({
-    model: AI_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Please optimize this CV:\n\n${originalText}` }
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 4096,
-  });
+  const prompt = `Please optimize this CV:\n\n${originalText}`;
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
+  try {
+    return await callGeminiJSON<{
+      improvedText: string;
+      analysis: { improvements: string[]; atsScore: number };
+    }>(prompt, systemPrompt);
+  } catch (error) {
+    console.error("Error optimizing CV:", error);
     return { improvedText: originalText, analysis: { improvements: [], atsScore: 50 } };
   }
-  const result = JSON.parse(content);
-  return {
-    improvedText: result.improvedText || originalText,
-    analysis: result.analysis || { improvements: [], atsScore: 50 },
-  };
 }
 
 export async function generateInterviewQuestions(
@@ -252,22 +270,18 @@ Return a JSON object with an array called "questions", where each item has:
 - modelAnswer: string
 - answerExplanation: string`;
 
-  const response = await openai.chat.completions.create({
-    model: AI_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Generate interview questions based on this CV:\n\n${cvText}` }
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 4096,
-  });
+  const prompt = `Generate interview questions based on this CV:\n\n${cvText}`;
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
+  try {
+    const result = await callGeminiJSON<{ questions: Array<{ questionText: string; modelAnswer: string; answerExplanation: string }> }>(
+      prompt,
+      systemPrompt
+    );
+    return result.questions || [];
+  } catch (error) {
+    console.error("Error generating interview questions:", error);
     return [];
   }
-  const result = JSON.parse(content);
-  return result.questions || [];
 }
 
 export async function evaluateAnswer(
@@ -293,25 +307,17 @@ Return a JSON object with:
 - scores: { communication: number, confidence: number, relevance: number, structure: number }
 - feedback: string (brief constructive feedback)`;
 
-  const response = await openai.chat.completions.create({
-    model: AI_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Question: ${question}\n\nCandidate's Answer: ${answer}${modelAnswer ? `\n\nModel Answer for reference: ${modelAnswer}` : ""}` }
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 1024,
-  });
+  const prompt = `Question: ${question}\n\nCandidate's Answer: ${answer}${modelAnswer ? `\n\nModel Answer for reference: ${modelAnswer}` : ""}`;
 
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
+  try {
+    return await callGeminiJSON<{
+      scores: { communication: number; confidence: number; relevance: number; structure: number };
+      feedback: string;
+    }>(prompt, systemPrompt);
+  } catch (error) {
+    console.error("Error evaluating answer:", error);
     return { scores: { communication: 50, confidence: 50, relevance: 50, structure: 50 }, feedback: "" };
   }
-  const result = JSON.parse(content);
-  return {
-    scores: result.scores || { communication: 50, confidence: 50, relevance: 50, structure: 50 },
-    feedback: result.feedback || "",
-  };
 }
 
 export async function generateSessionEvaluation(
@@ -349,31 +355,41 @@ Return a JSON object with:
 - detailedFeedback: object (any additional structured feedback)`;
 
   const qaContext = questions.map((q, i) => `Q${i + 1}: ${q.question}\nA${i + 1}: ${q.answer}`).join("\n\n");
+  const prompt = `Interview Q&A:\n\n${qaContext}`;
 
-  const response = await openai.chat.completions.create({
-    model: AI_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Interview Q&A:\n\n${qaContext}` }
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 2048,
-  });
+  try {
+    const result = await callGeminiJSON<{
+      topMistakes: string[];
+      topImprovements: string[];
+      focusPoint: string;
+      detailedFeedback: any;
+    }>(prompt, systemPrompt);
 
-  const content = response.choices[0]?.message?.content;
-  const result = content ? JSON.parse(content) : {};
-
-  return {
-    overallScore,
-    communicationScore: avgScores.communication,
-    confidenceScore: avgScores.confidence,
-    relevanceScore: avgScores.relevance,
-    structureScore: avgScores.structure,
-    topMistakes: result.topMistakes || [],
-    topImprovements: result.topImprovements || [],
-    focusPoint: result.focusPoint || "",
-    detailedFeedback: result.detailedFeedback || {},
-  };
+    return {
+      overallScore,
+      communicationScore: avgScores.communication,
+      confidenceScore: avgScores.confidence,
+      relevanceScore: avgScores.relevance,
+      structureScore: avgScores.structure,
+      topMistakes: result.topMistakes || [],
+      topImprovements: result.topImprovements || [],
+      focusPoint: result.focusPoint || "",
+      detailedFeedback: result.detailedFeedback || {},
+    };
+  } catch (error) {
+    console.error("Error generating session evaluation:", error);
+    return {
+      overallScore,
+      communicationScore: avgScores.communication,
+      confidenceScore: avgScores.confidence,
+      relevanceScore: avgScores.relevance,
+      structureScore: avgScores.structure,
+      topMistakes: [],
+      topImprovements: [],
+      focusPoint: "",
+      detailedFeedback: {},
+    };
+  }
 }
 
 export async function detectWeaknessPatterns(
@@ -398,21 +414,16 @@ Return a JSON object with an array called "patterns", where each item has:
 Return at most 3 patterns. If no clear patterns, return an empty array.`;
 
   const answersContext = allAnswers.map((a, i) => `Q${i + 1}: ${a.question}\nA${i + 1}: ${a.answer}`).join("\n\n");
+  const prompt = `Analyze these interview answers for weakness patterns:\n\n${answersContext}`;
 
-  const response = await openai.chat.completions.create({
-    model: AI_MODEL,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: `Analyze these interview answers for weakness patterns:\n\n${answersContext}` }
-    ],
-    response_format: { type: "json_object" },
-    max_tokens: 1024,
-  });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) {
+  try {
+    const result = await callGeminiJSON<{ patterns: Array<{ patternType: string; description: string; suggestion: string }> }>(
+      prompt,
+      systemPrompt
+    );
+    return result.patterns || [];
+  } catch (error) {
+    console.error("Error detecting weakness patterns:", error);
     return [];
   }
-  const result = JSON.parse(content);
-  return result.patterns || [];
 }

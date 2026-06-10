@@ -1,9 +1,10 @@
-import OpenAI from "openai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const openai = new OpenAI({
-  apiKey: process.env.AI_INTEGRATIONS_OPENAI_API_KEY,
-  baseURL: process.env.AI_INTEGRATIONS_OPENAI_BASE_URL,
-});
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error("GEMINI_API_KEY must be set in environment variables");
+}
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 export interface NameValidationResult {
   cvNameExtracted: string;
@@ -122,14 +123,10 @@ export async function extractNameFromCV(cvText: string): Promise<string | null> 
 CV Content:
 ${cvText.substring(0, 3000)}`;
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 50,
-      temperature: 0,
-    });
-
-    const extractedName = response.choices[0]?.message?.content?.trim();
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const extractedName = response.text().trim();
     
     if (!extractedName || extractedName === "UNKNOWN" || extractedName.length < 2) {
       return null;
