@@ -231,6 +231,8 @@ Return JSON:
     structure: 70,
     notes: "",
   };
+  let parsedMainTopic = "";
+  let parsedSkills: string[] = [];
 
   try {
     const text = response.text().replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -244,9 +246,11 @@ Return JSON:
     };
 
     if (parsed.mainTopic) {
+      parsedMainTopic = parsed.mainTopic;
       state.memory.topicsCovered.push(parsed.mainTopic);
     }
     if (parsed.skillsMentioned && Array.isArray(parsed.skillsMentioned)) {
+      parsedSkills = parsed.skillsMentioned;
       state.memory.skillsDiscussed.push(...parsed.skillsMentioned);
     }
   } catch (e) {
@@ -261,6 +265,14 @@ Return JSON:
   state.memory.conversationHistory.push({
     question: state.conversationHistory[state.conversationHistory.length - 2]?.content || "",
     answer: answerText,
+    analysis: {
+      mainTopic: parsedMainTopic || "general",
+      skillsMentioned: parsedSkills,
+      detailLevel: "surface",
+      hasConcreteExamples: false,
+      reasoningDepth: "shallow",
+      strategy: "clarify",
+    },
   });
 
   return { state, evaluation };

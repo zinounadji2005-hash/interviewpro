@@ -8,7 +8,7 @@ const router = Router();
 // Get user credits
 router.get("/", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req.user as any)?.claims?.sub || (req.session as any)?.userId;
+        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const creditBalance = await storage.getUserCredits(userId);
@@ -44,7 +44,7 @@ router.get("/feature-costs", async (req, res) => {
 // Get credit history
 router.get("/history", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req.user as any)?.claims?.sub || (req.session as any)?.userId;
+        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const limit = parseInt(req.query.limit as string) || 50;
@@ -59,7 +59,7 @@ router.get("/history", isAuthenticated, async (req, res) => {
 // Grant credits (Admin/Webhook)
 router.post("/grant", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req.user as any)?.claims?.sub || (req.session as any)?.userId;
+        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const { amount, source, transactionType, packageId, referenceId, idempotencyKey, metadata } = req.body;

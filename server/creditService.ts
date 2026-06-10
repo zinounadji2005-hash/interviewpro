@@ -268,7 +268,7 @@ class CreditService {
 
         let newFreeBalance = user.freeCredits;
         let newPaidBalance = user.paidCredits;
-        let creditTypeUsed = CREDIT_TYPES.FREE;
+        let creditTypeUsed: string = CREDIT_TYPES.FREE;
         let remaining = cost;
 
         if (requirePaidCredits) {

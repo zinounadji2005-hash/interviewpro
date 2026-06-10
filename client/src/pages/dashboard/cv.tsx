@@ -330,7 +330,7 @@ export default function CVManager() {
                 <TabsTrigger value="improved" disabled={!latestCv.improvedText} data-testid="tab-improved-cv">
                   Improved CV
                 </TabsTrigger>
-                {latestCv.analysis && (
+                {!!latestCv.analysis && (
                   <TabsTrigger value="analysis" data-testid="tab-cv-analysis">Analysis</TabsTrigger>
                 )}
               </TabsList>
@@ -369,7 +369,7 @@ export default function CVManager() {
                 <Card className="border-card-border">
                   <CardContent className="p-6">
                     <div className="space-y-6">
-                      {latestCv.analysis && typeof latestCv.analysis === "object" && (
+                      {!!latestCv.analysis && typeof latestCv.analysis === "object" && (
                         <>
                           {(latestCv.analysis as any).improvements && (
                             <div className="space-y-4">

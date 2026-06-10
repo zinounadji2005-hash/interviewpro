@@ -37,7 +37,7 @@ router.post("/admin/sync-users", async (req, res) => {
 // Dashboard data
 router.get("/dashboard", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req.user as any)?.claims?.sub || (req.session as any)?.userId;
+        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const [cvs, sessions, latestEvaluation, creditBalance, readinessScore] = await Promise.all([

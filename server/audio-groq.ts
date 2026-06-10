@@ -29,7 +29,7 @@ export async function speechToText(
       response_format: "text",
     });
 
-    return transcription as string;
+    return transcription as unknown as string;
   } catch (error) {
     console.error("Groq STT error:", error);
     // Fallback: Use OpenAI Whisper if Groq fails

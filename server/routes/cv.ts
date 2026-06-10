@@ -13,7 +13,7 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 
 // Get all CVs for the authenticated user
 router.get("/", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req.user as any)?.claims?.sub || (req.session as any)?.userId;
+        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const cvs = await storage.getCvsByUserId(userId);
@@ -27,7 +27,7 @@ router.get("/", isAuthenticated, async (req, res) => {
 // Upload a new CV
 router.post("/upload", isAuthenticated, upload.single("cv"), async (req, res) => {
     try {
-        const userId = (req.user as any)?.claims?.sub || (req.session as any)?.userId;
+        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const file = req.file;
@@ -36,9 +36,8 @@ router.post("/upload", isAuthenticated, upload.single("cv"), async (req, res) =>
         let textContent = "";
 
         if (file.mimetype === "application/pdf") {
-            const { PDFParse } = await import("pdf-parse"); // Dynamic import to avoid type issues if not available at top level
+            const { PDFParse } = await import("pdf-parse");
             const parser = new PDFParse({ data: file.buffer });
-            await parser.load();
             const result = await parser.getText();
             textContent = result.text;
         } else if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
@@ -84,7 +83,7 @@ router.post("/upload", isAuthenticated, upload.single("cv"), async (req, res) =>
 // Optimize a CV
 router.post("/:id/optimize", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req.user as any)?.claims?.sub || (req.session as any)?.userId;
+        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const cvId = parseInt(req.params.id);
@@ -123,7 +122,7 @@ router.post("/:id/optimize", isAuthenticated, async (req, res) => {
 // Confirm CV ownership
 router.post("/:id/confirm", isAuthenticated, async (req, res) => {
     try {
-        const userId = (req.user as any)?.claims?.sub || (req.session as any)?.userId;
+        const userId = (req as any).user?.claims?.sub || (req.session as any)?.userId;
         if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
         const cvId = parseInt(req.params.id);

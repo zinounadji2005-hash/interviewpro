@@ -34,7 +34,7 @@ import { FEATURE_KEYS, type CreditTransaction } from "@shared/schema";
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
 
 function getUserId(req: Request): string | null {
-  return (req.user as any)?.claims?.sub || (req.session as any)?.userId || null;
+  return (req as any).user?.claims?.sub || (req.session as any)?.userId || null;
 }
 
 export async function registerRoutes(
@@ -249,7 +249,6 @@ export async function registerRoutes(
       if (file.mimetype === "application/pdf") {
         const { PDFParse } = await import("pdf-parse");
         const parser = new PDFParse({ data: file.buffer });
-        await parser.load();
         const result = await parser.getText();
         textContent = result.text;
       } else if (file.mimetype === "application/vnd.openxmlformats-officedocument.wordprocessingml.document") {
