@@ -11,7 +11,7 @@ export default function LogoutPage() {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      await fetch(`${import.meta.env.VITE_API_URL || ""}/api/auth/logout`, { method: "POST", credentials: "include" });
     } catch (e) {
       // Continue even if request fails
     }

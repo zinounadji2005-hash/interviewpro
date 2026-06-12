@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
@@ -18,6 +19,15 @@ declare module "http" {
 
 const app = express();
 const httpServer = createServer(app);
+
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || "http://localhost:5173,https://interviewpro-6ww.pages.dev").split(",");
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) return cb(null, true);
+    cb(null, true);
+  },
+  credentials: true,
+}));
 
 app.use(
   express.json({

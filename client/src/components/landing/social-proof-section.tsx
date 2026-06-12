@@ -38,7 +38,7 @@ export function SocialProofSection() {
   useEffect(() => {
     async function fetchCount() {
       try {
-        const response = await fetch("/api/user-count");
+        const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/user-count`);
         if (response.ok) {
           const data = await response.json();
           setUserCount(data.count);

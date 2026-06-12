@@ -67,7 +67,7 @@ export default function CVManager() {
 
   const uploadMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const response = await fetch("/api/cvs/upload", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/cvs/upload`, {
         method: "POST",
         body: formData,
         credentials: "include",
