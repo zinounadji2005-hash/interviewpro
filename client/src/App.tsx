@@ -84,7 +84,7 @@ function AppRouter() {
 }
 
 function App() {
-  const base = import.meta.env.VITE_BASE_URL || "";
+  const base = (import.meta.env.VITE_BASE_URL || "").replace(/\/+$/, "");
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="system">
